@@ -1,4 +1,4 @@
-# CFSM-Theme-AnotherLuminaPlus
+# CFSM-Theme-LuminaLite
 
 [CF-Server-Monitor](https://github.com/huilang-me/CF-Server-Monitor) 的第三方主题。
 
@@ -8,12 +8,12 @@
 一句话：**LuminaPlus 的功能 + SAO 的外观**。
 
 <p align="center">
-  <img src="docs/preview.png" alt="AnotherLuminaPlus 预览" width="100%">
+  <img src="docs/preview.png" alt="LuminaLite 预览" width="100%">
 </p>
 
 ## 💖 致谢
 
-这个主题绝大部分的价值来自下面几位作者的开源工作，没有他们就没有 AnotherLuminaPlus。
+这个主题绝大部分的价值来自下面几位作者的开源工作，没有他们就没有 LuminaLite。
 
 - **[volcano-1025](https://github.com/volcano-1025) · [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus)**
   本主题直接 fork 自这里。是 volcano 把 LuminaPlus 完整移植到了 CF-Server-Monitor：整套数据层改走后端公开 API、
@@ -55,7 +55,7 @@
 
 **① 主题商店（推荐）**
 
-后台 `/admin#/admin` → 主题商店 → **AnotherLuminaPlus** → 安装并切换。
+后台 `/admin#/admin` → 主题商店 → **LuminaLite** → 安装并切换。
 （商店里的 **LuminaPlus** 是 volcano 的原版，**CFSM-SAO** 是 WAOR 的原版，都不是本主题。）
 
 **② 自定义主题 URL**
@@ -81,8 +81,8 @@ https://github.com/G1oow/CFSM-Theme-LuminaLite/tree/dist
 - **填 URL 装的**：地址是 `tree/dist` 的话，Workers 对分支地址有约一小时缓存，过了缓存自然就是新版；
   等不及就把地址临时换成新版本的 40 位 SHA。地址本来就锁在 SHA 上的，必须手动改成新 SHA。
 
-线上跑的是哪一版：看页面源码里的 `<meta name="theme-version" content="AnotherLuminaPlus v...">`，
-或把鼠标放到页脚的「AnotherLuminaPlus」上。**登录后台之后**，有新版本时页脚名字后面会出现「新版 vX」标签
+线上跑的是哪一版：看页面源码里的 `<meta name="theme-version" content="LuminaLite v...">`，
+或把鼠标放到页脚的「LuminaLite」上。**登录后台之后**，有新版本时页脚名字后面会出现「新版 vX」标签
 （版本从本仓库 `dist` 分支读取，只在登录后检查、本机缓存 12 小时，访客不会发出这个请求）。
 
 ### 搭配 Egern 小组件（可选）

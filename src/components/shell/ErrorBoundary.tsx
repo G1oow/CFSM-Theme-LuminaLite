@@ -98,7 +98,7 @@ function ErrorFallback({
     <div className="theme-error-shell">
       <section className="theme-error-card" role="alert">
         <div>
-          <p className="theme-error-kicker">AnotherLuminaPlus</p>
+          <p className="theme-error-kicker">LuminaLite</p>
           <h1 className="theme-error-title">{displayTitle}</h1>
           <p className="theme-error-message">
             {displayMessage}

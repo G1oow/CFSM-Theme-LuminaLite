@@ -15,7 +15,7 @@ import { EN } from "./en";
 
 export type Lang = "zh" | "en";
 
-const STORAGE_KEY = "cfsm-anotherluminaplus:lang";
+const STORAGE_KEY = "cfsm-luminalite:lang";
 
 function detectLang(): Lang {
   try {

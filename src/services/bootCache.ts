@@ -10,7 +10,7 @@ import type { PublicConfig } from "@/types/cfsm";
  * - 超过 24 小时的缓存不用；节点列表最多每分钟写一次（几十台节点的响应有几百 KB）。
  */
 
-const STORAGE_KEY = "cfsm-anotherluminaplus:boot-cache";
+const STORAGE_KEY = "cfsm-luminalite:boot-cache";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SERVERS_WRITE_INTERVAL_MS = 60 * 1000;
 

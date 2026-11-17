@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const HOUR = 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 8, 11, 12, 0);
 const RELEASE_HTML =
-  '<!doctype html><html><head>\n  <meta name="theme-version" content="AnotherLuminaPlus v1.2.16" />\n  </head></html>';
+  '<!doctype html><html><head>\n  <meta name="theme-version" content="LuminaLite v1.2.16" />\n  </head></html>';
 
 // 模块有缓存：每条用例重新求值，等于刷新页面。
 async function loadModule() {
@@ -38,7 +38,7 @@ describe("theme version parsing", () => {
     expect(readCurrentThemeVersion()).toBe("1.2.15");
 
     // 改名后的写法照样读得出。
-    expect(parseThemeVersionMeta("AnotherLuminaPlus v1.2.21")).toBe("1.2.21");
+    expect(parseThemeVersionMeta("LuminaLite v1.2.21")).toBe("1.2.21");
   });
 });
 

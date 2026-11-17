@@ -82,7 +82,7 @@ function themeVersionMeta(version: string): Plugin {
     transformIndexHtml(html) {
       return html.replace(
         "</head>",
-        `  <meta name="theme-version" content="AnotherLuminaPlus v${version}" />\n  </head>`,
+        `  <meta name="theme-version" content="LuminaLite v${version}" />\n  </head>`,
       );
     },
   };

@@ -19,7 +19,7 @@ const LATEST_THEME_TTL_MS = 12 * 60 * 60 * 1000;
 const LATEST_THEME_FAILURE_TTL_MS = 60 * 60 * 1000;
 const LATEST_THEME_TIMEOUT_MS = 8_000;
 
-/** `AnotherLuminaPlus v1.2.15`（老版本是 `LuminaPlus v1.2.15`）→ `1.2.15`；读不出返回 null。 */
+/** `LuminaLite v1.2.15`（老版本是 `AnotherLuminaPlus v1.2.15` / `LuminaPlus v1.2.15`）→ `1.2.15`；读不出返回 null。 */
 export function parseThemeVersionMeta(content: unknown): string | null {
   if (typeof content !== "string") return null;
   const match = content.trim().match(/v?(\d+(?:\.\d+)+)$/i);

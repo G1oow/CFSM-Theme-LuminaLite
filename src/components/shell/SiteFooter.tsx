@@ -77,7 +77,7 @@ export function SiteFooter() {
         <span className="home-footer-divider" aria-hidden="true" />
 
         {/* 主题标识 */}
-        <span className="home-footer-title">AnotherLuminaPlus</span>
+        <span className="home-footer-title">LuminaLite</span>
 
         <span className="home-footer-divider" aria-hidden="true" />
 
