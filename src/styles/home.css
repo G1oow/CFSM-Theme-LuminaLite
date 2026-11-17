@@ -568,7 +568,8 @@
 }
 
 .mao-stat-card[data-metric="uptime"] .mao-stat-value {
-  color: var(--tag-grass-fg);
+  /* 原色太跳：留一点绿意，但压到与其它读数同一档的沉稳度 */
+  color: color-mix(in srgb, var(--tag-grass-fg) 55%, var(--text-secondary));
 }
 
 .mao-stat-card[data-metric="asset"] .mao-stat-value > span {
