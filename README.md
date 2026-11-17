@@ -1,4 +1,6 @@
-<!-- 宣传图：前端页面定稿后再生成 1200×630，补在标题上方 -->
+<div align="center">
+  <img src="docs/preview.png" alt="LuminaLite 首页预览" width="100%" />
+</div>
 
 <h1 align="center">LuminaLite</h1>
 
