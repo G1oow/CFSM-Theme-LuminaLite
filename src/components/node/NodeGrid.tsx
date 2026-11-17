@@ -68,6 +68,7 @@ import { getRenewalReminders, type RenewalReminderSource } from "@/utils/renewal
 import { DiaTextReveal } from "@/components/ui/DiaTextReveal";
 import { t, useLang } from "@/i18n";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MetricSparkline } from "./MetricSparkline";
 
 // 卡片视图网格密度；列表档由独立组件布局。
 const GRID_LAYOUT: Record<NodeViewMode, { className: string; minColumnWidth: number }> = {
@@ -394,6 +395,7 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {totalConnections.toLocaleString()} <span className="mao-stat-unit">Conn</span>
             </div>
+            <MetricSparkline value={totalConnections} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("TCP 连接: {tcp} · UDP 连接: {udp}", { tcp: overview.totalTcpConn.toLocaleString(), udp: overview.totalUdpConn.toLocaleString() })}>
                 TCP {overview.totalTcpConn.toLocaleString()} · UDP {overview.totalUdpConn.toLocaleString()}
@@ -415,6 +417,7 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {overview.avgCpu.toFixed(1)} <span className="mao-stat-unit">%</span>
             </div>
+            <MetricSparkline value={overview.avgCpu} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption">
                 {overview.onlineNodes > 0 ? t("{n} 台在线服务器", { n: overview.onlineNodes }) : t("暂无在线服务器")}
@@ -436,6 +439,7 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {ramUsedValue} <span className="mao-stat-unit">{ramUsedUnit}</span>
             </div>
+            <MetricSparkline value={overview.totalRamUsed} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("已用: {used} / 总量: {total}", { used: formatBytes(overview.totalRamUsed), total: formatBytes(overview.totalRamTotal) })}>
                 {t("共 {total}", { total: formatBytes(overview.totalRamTotal) })} · {overview.ramPct.toFixed(1)}%
@@ -457,6 +461,7 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {diskUsedValue} <span className="mao-stat-unit">{diskUsedUnit}</span>
             </div>
+            <MetricSparkline value={overview.totalDiskUsed} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("已用: {used} / 总量: {total}", { used: formatBytes(overview.totalDiskUsed), total: formatBytes(overview.totalDiskTotal) })}>
                 {t("共 {total}", { total: formatBytes(overview.totalDiskTotal) })} · {overview.diskPct.toFixed(1)}%

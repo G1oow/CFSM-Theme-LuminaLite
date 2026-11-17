@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatByteRate, formatByteRateLabel } from "@/utils/format";
 import { t } from "@/i18n";
+import { resolveTooltipPlacement, TOOLTIP_GAP } from "./chartTooltipPlacement";
 
 interface SingleTrafficPoint {
   time: number;
@@ -12,9 +13,17 @@ interface HoverInfo {
   time: number;
   rate: number;
   x: number;
+  /** 顶点在画布坐标系里的纵坐标：悬浮卡片贴着这个点显示 */
+  y: number;
 }
 
 const MAX_HISTORY_POINTS = 16;
+
+// 绘图区几何：绘制与指针换算共用一套数值，卡片位置才对得上顶点
+const CHART_PADDING_LEFT = 50;
+const CHART_PADDING_RIGHT = 14;
+const CHART_PADDING_TOP = 6;
+const CHART_PADDING_BOTTOM = 18;
 
 function formatPointTime(timeMs: number): string {
   const d = new Date(timeMs);
@@ -69,11 +78,22 @@ function SingleTrafficCard({
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
   const historyRef = useRef<SingleTrafficPoint[]>([]);
+  // 绘图区几何由绘制时写入，指针换算读同一份，顶点坐标才对得上
+  const geometryRef = useRef({ plotWidth: 0, plotHeight: 0, maxVal: 1, canvasHeight: 0 });
   const hoverIndexRef = useRef<number | null>(null);
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
+  const [tooltipHeight, setTooltipHeight] = useState(0);
 
   hoverIndexRef.current = hoverInfo?.index ?? null;
+
+  // 卡片高度量出来才能判断贴上方还是下方；离开时不清零，下次悬浮不会先贴错边再翻过来
+  useLayoutEffect(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    setTooltipHeight(el.offsetHeight);
+  }, [hoverInfo?.index]);
 
   // 记录滚动历史点
   useEffect(() => {
@@ -138,12 +158,14 @@ function SingleTrafficCard({
     }
     const maxVal = getNiceRateCeiling(peakRate);
 
-    const paddingLeft = 50;
-    const paddingBottom = 18;
-    const paddingTop = 6;
-    const paddingRight = 14;
+    const paddingLeft = CHART_PADDING_LEFT;
+    const paddingBottom = CHART_PADDING_BOTTOM;
+    const paddingTop = CHART_PADDING_TOP;
+    const paddingRight = CHART_PADDING_RIGHT;
     const plotWidth = width - paddingLeft - paddingRight;
     const plotHeight = height - paddingTop - paddingBottom;
+    // 指针换算要用同一份几何，否则悬浮卡片会偏离顶点
+    geometryRef.current = { plotWidth, plotHeight, maxVal, canvasHeight: height };
 
     // 绘制背景参考网格线
     ctx.strokeStyle = "rgba(140, 140, 140, 0.14)";
@@ -280,6 +302,12 @@ function SingleTrafficCard({
     return () => cancelAnimationFrame(animId);
   }, [draw]);
 
+  // 指针切换顶点时同步重绘高亮圆点与十字线；离开时清掉高亮。
+  useEffect(() => {
+    const animId = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(animId);
+  }, [draw, hoverInfo?.index]);
+
   // 监听容器与视口尺寸变化，自适应重绘，杜绝任何桌面端与移动端切换时的拉伸形变
   useEffect(() => {
     const target = wrapRef.current || canvasRef.current;
@@ -317,10 +345,12 @@ function SingleTrafficCard({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const paddingLeft = 50;
-    const paddingRight = 14;
-    const plotWidth = rect.width - paddingLeft - paddingRight;
-
+    // 首帧还没画过时几何是空的，按画布宽度现算一遍兜底
+    const geometry = geometryRef.current;
+    const plotWidth =
+      geometry.plotWidth > 0
+        ? geometry.plotWidth
+        : rect.width - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
     if (plotWidth <= 0) return;
 
     const history = historyRef.current;
@@ -328,23 +358,35 @@ function SingleTrafficCard({
     if (points.length <= 1) return;
 
     const x = e.clientX - rect.left;
-    const ratio = Math.max(0, Math.min(1, (x - paddingLeft) / plotWidth));
+    const ratio = Math.max(0, Math.min(1, (x - CHART_PADDING_LEFT) / plotWidth));
     const idx = Math.round(ratio * (points.length - 1));
     const point = points[idx];
     if (!point) return;
 
-    const pointX = paddingLeft + (idx / (points.length - 1)) * plotWidth;
+    const pointX = CHART_PADDING_LEFT + (idx / (points.length - 1)) * plotWidth;
+    // 纵坐标跟绘制时的映射一致：(0 → 底边，maxVal → 顶边)
+    const maxVal = geometry.maxVal > 0 ? geometry.maxVal : 1;
+    const plotHeight = geometry.plotHeight;
+    const pointY =
+      CHART_PADDING_TOP + plotHeight - (Math.max(0, point.rate) / maxVal) * plotHeight;
+
     setHoverInfo({
       index: idx,
       time: point.time,
       rate: point.rate,
       x: pointX,
+      y: pointY,
     });
   };
 
   const handlePointerLeave = () => {
     setHoverInfo(null);
   };
+
+  // 卡片贴着顶点：上下都塞不满时挑溢出更少的一侧
+  const tooltipPlacement = hoverInfo
+    ? resolveTooltipPlacement(hoverInfo.y, geometryRef.current.canvasHeight, tooltipHeight)
+    : "below";
 
   return (
     <div className="mao-realtime-chart-card">
@@ -390,10 +432,18 @@ function SingleTrafficCard({
         <canvas ref={canvasRef} className="mao-realtime-chart-canvas" />
         {hoverInfo && (
           <div
+            ref={tooltipRef}
             className="mao-chart-tooltip"
+            data-placement={tooltipPlacement}
             style={{
               left: `clamp(60px, ${hoverInfo.x}px, calc(100% - 60px))`,
-            }}
+              top: `${hoverInfo.y}px`,
+              // 卡片贴着顶点：上方放得下就整卡托在点上面，否则挂在点下方
+              "--tooltip-shift":
+                tooltipPlacement === "above"
+                  ? `calc(-100% - ${TOOLTIP_GAP}px)`
+                  : `${TOOLTIP_GAP}px`,
+            } as React.CSSProperties}
           >
             <div className="mao-chart-tooltip-header">
               <span className="mao-chart-tooltip-time">{formatPointTime(hoverInfo.time)}</span>

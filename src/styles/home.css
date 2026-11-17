@@ -363,12 +363,13 @@
   flex-direction: column;
   justify-content: space-between;
   border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--hairline);
   background: #ffffff;
   padding: 13px 15px;
   min-height: 96px;
   height: 100%;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  /* 浅色卡面原先只有 2% 阴影，贴在灰底上等于没抬起；这里给一层落影 + 一层接触影 */
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07), 0 8px 18px -6px rgba(16, 24, 40, 0.16);
   /* 只过渡真正会变的属性；配 translateZ(0) 让整卡提前成层，避免悬停时重新栅格化图标 */
   transform: translateZ(0);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease,
@@ -382,8 +383,8 @@
 }
 
 .mao-stat-card:hover {
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.06);
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 14px 28px -10px rgba(16, 24, 40, 0.24);
   transform: translate3d(0, -1px, 0);
 }
 
@@ -424,12 +425,12 @@
   );
 }
 
-@media (prefers-reduced-motion: reduce) {
-
 /* 深色主题：indigo-500 #6366f1 × 22% */
 :root[data-appearance="dark"] .mao-spotlight-layer {
   --spotlight-color: rgba(99, 102, 241, 0.22);
 }
+
+@media (prefers-reduced-motion: reduce) {
   .mao-spotlight-layer {
     display: none;
   }
@@ -478,7 +479,7 @@
   border-radius: 0;
 }
 
-/* 深色模式：启用 HUD 科技感微底框与发光阴影 */
+/* 深色模式：启用 HUD 微底框（只留底框与描边，不叠白色光晕） */
 :root[data-appearance="dark"] .mao-stat-icon-hud {
   width: 22px;
   height: 22px;
@@ -487,7 +488,7 @@
   box-sizing: border-box;
   background: color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 12%, rgba(0, 0, 0, 0.45));
   border: 1px solid color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 24%, transparent);
-  box-shadow: 0 0 7px -1px color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 25%, transparent);
+  /* 不发光：图标本身是中性色，光晕只能取到 --text-primary 的白，卡片四周会糊一圈白毛 */
 }
 
 /* EVA 初号机深色模式：机甲霓虹高光光晕 */
@@ -512,10 +513,14 @@
               inset 0 0 5px color-mix(in srgb, var(--current-metric-color, #facc15) 18%, transparent);
 }
 
-/* 深色模式下悬停微互动：HUD 微底框微妙提亮与微光扩散 */
+/* 左侧指标图标在全部深色配色下都不发光；保留各配色原有底框与描边。 */
+:root[data-appearance="dark"] .mao-stat-card .mao-stat-icon-hud {
+  box-shadow: none;
+}
+
+/* 深色模式下悬停微互动：只提亮描边，不再扩光 */
 :root[data-appearance="dark"] .mao-stat-card:hover .mao-stat-icon-hud {
   border-color: color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 50%, transparent);
-  box-shadow: 0 0 11px color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 45%, transparent);
 }
 
 
@@ -545,6 +550,49 @@
   margin: 7px 0 3px;
 }
 
+/* 左栏仅主数值着色，单位和辅助说明继续使用中性色。 */
+.mao-stat-card[data-metric="connections"] .mao-stat-value {
+  color: var(--tag-teal-fg);
+}
+
+.mao-stat-card[data-metric="cpu"] .mao-stat-value {
+  color: var(--progress-cpu);
+}
+
+.mao-stat-card[data-metric="ram"] .mao-stat-value {
+  color: var(--progress-memory);
+}
+
+.mao-stat-card[data-metric="disk"] .mao-stat-value {
+  color: var(--progress-disk);
+}
+
+.mao-stat-card[data-metric="uptime"] .mao-stat-value {
+  color: var(--tag-grass-fg);
+}
+
+.mao-stat-card[data-metric="asset"] .mao-stat-value > span {
+  color: var(--accent-strong);
+}
+
+/* 白底上蓝/紫/橙的原始指标色偏浅，保留色相并压深主数字。 */
+:root:not([data-appearance="dark"]) .mao-stat-card[data-metric="cpu"] .mao-stat-value {
+  color: color-mix(in srgb, var(--progress-cpu) 80%, var(--text-primary));
+}
+
+:root:not([data-appearance="dark"]) .mao-stat-card[data-metric="ram"] .mao-stat-value {
+  color: color-mix(in srgb, var(--progress-memory) 78%, var(--text-primary));
+}
+
+:root:not([data-appearance="dark"]) .mao-stat-card[data-metric="disk"] .mao-stat-value {
+  color: color-mix(in srgb, var(--progress-disk) 72%, var(--text-primary));
+}
+
+.mao-stat-card .mao-stat-value .mao-stat-unit,
+.mao-stat-card .mao-stat-value .mao-stat-slash-total {
+  color: var(--text-tertiary);
+}
+
 .mao-stat-slash-total {
   font-style: normal;
   font-size: 13px;
@@ -557,6 +605,39 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
+}
+
+/* 指标卡迷你面积图：卡面够宽才铺开（宽度由组件测量决定），窄了收成 0 高、不占位 */
+.mao-stat-sparkline {
+  --spark-line: #3b82f6;
+  --spark-fill-top: rgba(59, 130, 246, 0.3);
+  --spark-fill-bottom: rgba(59, 130, 246, 0.01);
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: height 180ms ease;
+}
+
+:root[data-appearance="dark"] .mao-stat-sparkline {
+  --spark-line: #6366f1;
+  --spark-fill-top: rgba(99, 102, 241, 0.4);
+  --spark-fill-bottom: rgba(99, 102, 241, 0.01);
+}
+
+.mao-stat-sparkline[data-visible="true"] {
+  height: 26px;
+}
+
+.mao-stat-sparkline-svg {
+  display: block;
+}
+
+/* 小屏两列：卡面本来就窄，别把读数挤走 */
+@media (max-width: 640px) {
+  .mao-stat-sparkline {
+    display: none;
+  }
 }
 
 .mao-stat-footer {
@@ -583,11 +664,11 @@
   flex-direction: column;
   justify-content: space-between;
   border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--hairline);
   background: #ffffff;
   padding: clamp(14px, 1.8vw, 18px);
   gap: 14px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 20px -8px rgba(16, 24, 40, 0.14);
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -1919,8 +2000,8 @@
 
 .mao-network-section .mao-realtime-chart-card {
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 2px 6px -2px rgba(16, 24, 40, 0.07);
 }
 
 :root[data-appearance="dark"] .mao-network-section .mao-realtime-chart-card {
@@ -2019,8 +2100,9 @@
 /* 实时图表节点悬浮详情卡片 */
 .mao-chart-tooltip {
   position: absolute;
-  top: -2px;
-  transform: translateX(-50%);
+  /* top / left 由顶点坐标写在内联样式里，这里只负责把卡片对准那个点：
+     --tooltip-shift 决定卡片整体落在点上方还是下方 */
+  transform: translate(-50%, var(--tooltip-shift, calc(-100% - 10px)));
   z-index: 20;
   pointer-events: none;
   -webkit-touch-callout: none;
@@ -2041,15 +2123,14 @@
   animation: mao-tooltip-pop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 弹出只做透明度：位移交给 --tooltip-shift，动画里再改 transform 会把定位顶掉 */
 @keyframes mao-tooltip-pop {
   from {
     opacity: 0;
-    transform: translate(-50%, -4px) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
   }
 }
 
@@ -2109,12 +2190,12 @@
 .mao-cluster-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--hairline);
   border-radius: 22px;
   background: var(--surface-elev, #eaecf0);
   padding: clamp(16px, 2vw, 24px);
   margin-bottom: 8px;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 20px 44px -28px rgba(16, 24, 40, 0.22);
   position: relative;
   z-index: 1;
   gap: 16px;
@@ -2486,7 +2567,8 @@ body.is-resizing-columns {
   align-items: center;
   gap: 10px;
   padding-top: 8px;
-  border-top: 1px solid rgba(127, 127, 127, 0.16);
+  /* 分隔线走统一 token：浅色卡面上的固定灰已经淡到和背景分不出来 */
+  border-top: 1px solid var(--hairline);
   font-size: 11px;
   color: var(--text-tertiary);
 }
