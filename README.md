@@ -15,9 +15,6 @@
 
 [CF-Server-Monitor](https://github.com/huilang-me/CF-Server-Monitor) 的第三方监控主题。本仓库 fork 自 Vegas7 的 [CFSM-Theme-AnotherLuminaPlus](https://github.com/Vegas7/CFSM-Theme-AnotherLuminaPlus)；再往上是 [volcano-1025](https://github.com/volcano-1025) 移植到 CFSM 的数据层 [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus)，外观、配色与动效来自 [WAOR](https://github.com/WAOR) 的 [CFSM-SAO](https://github.com/WAOR/CFSM-SAO)。
 
-> [!NOTE]
-> 主题商店里的 **LuminaPlus** 和 **CFSM-SAO** 是两个上游原版，不是本主题；本主题叫 **LuminaLite**。
-
 ## 特性
 
 **首页**
