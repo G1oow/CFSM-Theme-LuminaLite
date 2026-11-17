@@ -4,6 +4,7 @@ import {
   formatCompactBillingCycle,
   formatCompactExpire,
   getBarGeometry,
+  getBarHit,
   healthBarInteractionModel,
   healthBarSlotModel,
   snapBarRect,
@@ -177,6 +178,56 @@ describe("snapBarRect", () => {
   });
 });
 
+describe("getBarHit", () => {
+  const cases = [
+    { width: 189.5, count: 20, dpr: 1 },
+    { width: 189.5, count: 20, dpr: 1.1 },
+    { width: 104, count: 14, dpr: 1.25 },
+  ];
+
+  it("hits the bar under the pointer and reports that bar's center", () => {
+    for (const { width, count, dpr } of cases) {
+      const geometry = getBarGeometry(width, count, dpr);
+      for (let index = 0; index < count; index += 1) {
+        const rect = snapBarRect(index, geometry, dpr);
+        const leftHalf = getBarHit(rect.x + 0.5 / dpr, width, count, dpr);
+        const rightHalf = getBarHit(rect.x + rect.width - 0.5 / dpr, width, count, dpr);
+        const center = getBarHit(rect.x + rect.width / 2, width, count, dpr);
+        expect(leftHalf?.index).toBe(index);
+        expect(rightHalf?.index).toBe(index);
+        expect(center?.index).toBe(index);
+        // 浮层锚点用的比例，必须正好是这根柱子的中心（按 canvas 元素总宽算）。
+        const inset = Math.min(width / 2, 1 / dpr);
+        expect(center?.fraction).toBeCloseTo(
+          (inset + rect.x + rect.width / 2) / (width + inset * 2),
+          9,
+        );
+      }
+    }
+  });
+
+  it("no longer lands on the neighbouring bar when the pointer is on the right half", () => {
+    const width = 189.5;
+    const count = 20;
+    const dpr = 1;
+    const geometry = getBarGeometry(width, count, dpr);
+    const rect = snapBarRect(0, geometry, dpr);
+    // 第一根柱子右半边：旧实现按「整宽均分」会算成第 2 根，高亮与浮层一起偏位。
+    const probe = rect.x + rect.width - 0.5;
+    const legacySlot = Math.max(
+      0,
+      Math.min(count - 1, Math.floor(probe / (width / count))),
+    );
+
+    expect(legacySlot).toBe(1);
+    expect(getBarHit(probe, width, count, dpr)?.index).toBe(0);
+  });
+
+  it("returns null without a track", () => {
+    expect(getBarHit(10, 0, 20, 1)).toBeNull();
+    expect(getBarHit(10, 100, 0, 1)).toBeNull();
+  });
+});
 describe("snapBarTop", () => {
   it("rounds the top edge to whole device pixels", () => {
     expect(snapBarTop(11 - 11 * 0.84, 1)).toBe(2);

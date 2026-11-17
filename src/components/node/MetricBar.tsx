@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from "react";
-import { CanvasStrip, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
+import { CanvasStrip, barCornerRadius, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
 import { getBarGeometry, snapBarRect } from "./nodeCardShared";
 
 const METRIC_SEGMENT_COUNT = 18;
@@ -50,12 +50,12 @@ export function MetricBar({
 
         ctx.globalAlpha = 0.58;
         ctx.fillStyle = inactiveColor;
-        fillRoundedRect(ctx, x, 0, segmentDrawWidth, height, 2);
+        fillRoundedRect(ctx, x, 0, segmentDrawWidth, height, barCornerRadius(segmentDrawWidth, height, dpr));
 
         if (isActive) {
           ctx.globalAlpha = 0.42 + fillLevel * 0.56;
           ctx.fillStyle = activePaint;
-          fillRoundedRect(ctx, x, 0, segmentDrawWidth, height, 2);
+          fillRoundedRect(ctx, x, 0, segmentDrawWidth, height, barCornerRadius(segmentDrawWidth, height, dpr));
         }
       }
 

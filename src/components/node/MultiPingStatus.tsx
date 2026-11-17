@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { clsx } from "clsx";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { usePreferences } from "@/hooks/usePreferences";
@@ -33,7 +33,13 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
 }) {
   useLang();
   const themeSettings = useThemeSettings();
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<{
+    index: number;
+    fraction: number | null;
+  } | null>(null);
+  const onHoverIndex = useCallback((index: number | null, fraction?: number | null) => {
+    setHovered(index == null ? null : { index, fraction: fraction ?? null });
+  }, []);
   const latencyColor = resolveCustomLatencyColor(
     line.lastValue,
     themeSettings.pingLatencyThresholds,
@@ -64,7 +70,7 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
           ? "—"
           : `${line.loss.toFixed(1)}%`;
   const hoveredBucket =
-    hoveredIndex == null ? null : (line.buckets[hoveredIndex] ?? null);
+    hovered == null ? null : (line.buckets[hovered.index] ?? null);
   const tooltip = hoveredBucket
     ? formatHealthBucketTooltip(hoveredBucket, metric)
     : null;
@@ -116,19 +122,20 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
             buckets={line.buckets}
             redrawKey={redrawKey}
             height={chartHeight}
-            onHoverIndex={setHoveredIndex}
+            onHoverIndex={onHoverIndex}
           />
         ) : (
           <QualityBars
             buckets={line.buckets}
             redrawKey={redrawKey}
             height={chartHeight}
-            onHoverIndex={setHoveredIndex}
+            onHoverIndex={onHoverIndex}
           />
         )}
         <HealthBucketTooltip
           text={tooltip}
-          index={hoveredIndex}
+          index={hovered?.index ?? null}
+          fraction={hovered?.fraction ?? null}
           count={line.buckets.length}
         />
       </span>

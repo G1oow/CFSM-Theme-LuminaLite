@@ -7,6 +7,7 @@ import {
   type PointerEvent,
 } from "react";
 import { supportsFineHover } from "@/utils/mediaQuery";
+import type { BarHit } from "./nodeCardShared";
 import { TOUCH_BUCKET_HOLD_MS } from "./touchBucketPick";
 
 export interface CanvasStripInteraction {
@@ -26,8 +27,9 @@ interface CanvasStripProps {
     /** 画柱状图时按它把坐标取整到设备像素，否则柱边会跨两列渲染成半透明（见 snapBarRect）。 */
     dpr: number,
   ) => void;
-  getHoverIndex?: (offsetX: number, width: number) => number | null;
-  onHoverIndex?: (index: number | null) => void;
+  /** 命中哪根柱子，附加该柱柱心占可画宽度的比例（见 getBarHit）。 */
+  getHoverIndex?: (offsetX: number, width: number, dpr: number) => BarHit | null;
+  onHoverIndex?: (index: number | null, fraction: number | null) => void;
 }
 
 type WidthListener = (width: number) => void;
@@ -342,6 +344,28 @@ export function safeCanvasColor(color: string): string {
   return value;
 }
 
+/**
+ * 柱子端头的倒角半径（CSS 像素）。
+ *
+ * 半径按设备像素给（默认 1 个）再折算回 CSS 像素：缩放比一变，倒角仍然正好是一个设备像素，
+ * 不会因为跟着 CSS 一起放大而在高 DPI 屏上重新变钝。
+ *
+ * 宽或高在门槛以下的柱子直接方头：那点尺寸上倒角只能靠抗锯齿画出来，柱端会被啃成胶囊或
+ * 吃掉大半高度，看着比直角还糊。
+ */
+export function barCornerRadius(
+  barWidth: number,
+  barHeight: number,
+  dpr: number,
+  radiusDevicePx = 1,
+): number {
+  const ratio = dpr > 0 ? dpr : 1;
+  const widthDevice = barWidth * ratio;
+  const heightDevice = barHeight * ratio;
+  if (widthDevice < 6 || heightDevice < 4) return 0;
+  return radiusDevicePx / ratio;
+}
+
 export function fillRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -351,7 +375,18 @@ export function fillRoundedRect(
   radius: number,
 ) {
   const safeRadius = Math.max(0, Math.min(radius, width / 2, height / 2));
+  // 半径归零（窄柱方头）时直接方填充：少一次路径构造，也没有任何抗锯齿边。
+  if (safeRadius <= 0) {
+    ctx.fillRect(x, y, width, height);
+    return;
+  }
   ctx.beginPath();
+  // 现代浏览器用原生圆角，弧线贴合像素栅格；旧 WebKit 没有 roundRect，退回手写二次曲线。
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(x, y, width, height, safeRadius);
+    ctx.fill();
+    return;
+  }
   ctx.moveTo(x + safeRadius, y);
   ctx.lineTo(x + width - safeRadius, y);
   ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
@@ -554,25 +589,27 @@ export function CanvasStrip({
     const previous = lastHoverIndexRef.current;
     lastHoverIndexRef.current = null;
     animateHover(previous, 0);
-    onHoverIndex?.(null);
+    onHoverIndex?.(null, null);
   };
 
-  const selectIndex = (next: number | null) => {
-    if (next === lastHoverIndexRef.current) return;
-    lastHoverIndexRef.current = next;
-    animateHover(next, next == null ? 0 : 1);
-    onHoverIndex?.(next);
+  const selectIndex = (next: BarHit | null) => {
+    const index = next?.index ?? null;
+    if (index === lastHoverIndexRef.current) return;
+    lastHoverIndexRef.current = index;
+    animateHover(index, index == null ? 0 : 1);
+    // 浮层锚点用柱心比例，跟高亮的是同一根柱子（见 getBarHit）。
+    onHoverIndex?.(index, next?.fraction ?? null);
   };
 
   /**
    * 触屏点哪根柱子。canvas 铺满容器，按 X 比例换算即可（和 hover 同一套 `getHoverIndex`）；
    * 比例要按可画区域算 —— 柱子画在里面，用整条宽度换算出的一格会整体偏掉一点点。
    */
-  const resolveTouchIndex = (event: PointerEvent<HTMLCanvasElement>): number | null => {
+  const resolveTouchIndex = (event: PointerEvent<HTMLCanvasElement>): BarHit | null => {
     if (!getHoverIndex || width <= 0) return null;
     const rect = event.currentTarget.getBoundingClientRect();
     // 不用 offsetX：触屏事件的 target 可能是 canvas 本身以外的东西（捕获之后尤其如此）。
-    return getHoverIndex(event.clientX - rect.left - edgeInset, drawWidth);
+    return getHoverIndex(event.clientX - rect.left - edgeInset, drawWidth, dpr);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -598,7 +635,7 @@ export function CanvasStrip({
       return;
     }
     if (!getHoverIndex || width <= 0) return;
-    selectIndex(getHoverIndex(event.nativeEvent.offsetX - edgeInset, drawWidth));
+    selectIndex(getHoverIndex(event.nativeEvent.offsetX - edgeInset, drawWidth, dpr));
   };
 
   const endTouch = (event: PointerEvent<HTMLCanvasElement>, keep: boolean) => {

@@ -453,15 +453,21 @@ const NodeHealthSection = memo(function NodeHealthSection({
 }) {
   useLang();
   const pingStyle = useThemeSettings().homepagePingStyle;
-  const [hoveredLatencyIndex, setHoveredLatencyIndex] = useState<number | null>(null);
-  const [hoveredLossIndex, setHoveredLossIndex] = useState<number | null>(null);
-  const onLatencyHover = useCallback((index: number | null) => {
-    setHoveredLatencyIndex(index);
-    if (index != null) setHoveredLossIndex(null);
+  const [hoveredLatency, setHoveredLatency] = useState<{
+    index: number;
+    fraction: number | null;
+  } | null>(null);
+  const [hoveredLoss, setHoveredLoss] = useState<{
+    index: number;
+    fraction: number | null;
+  } | null>(null);
+  const onLatencyHover = useCallback((index: number | null, fraction?: number | null) => {
+    setHoveredLatency(index == null ? null : { index, fraction: fraction ?? null });
+    if (index != null) setHoveredLoss(null);
   }, []);
-  const onLossHover = useCallback((index: number | null) => {
-    setHoveredLossIndex(index);
-    if (index != null) setHoveredLatencyIndex(null);
+  const onLossHover = useCallback((index: number | null, fraction?: number | null) => {
+    setHoveredLoss(index == null ? null : { index, fraction: fraction ?? null });
+    if (index != null) setHoveredLatency(null);
   }, []);
   const { title: emptyTitle, text: emptyText } = pingEmptyLabels(
     hasRealHomepagePingBinding,
@@ -469,9 +475,9 @@ const NodeHealthSection = memo(function NodeHealthSection({
     pingError,
   );
   const hoveredLatencyBucket =
-    hoveredLatencyIndex == null ? null : (pingBuckets[hoveredLatencyIndex] ?? null);
+    hoveredLatency == null ? null : (pingBuckets[hoveredLatency.index] ?? null);
   const hoveredLossBucket =
-    hoveredLossIndex == null ? null : (pingBuckets[hoveredLossIndex] ?? null);
+    hoveredLoss == null ? null : (pingBuckets[hoveredLoss.index] ?? null);
   const latencyTooltip = hoveredLatencyBucket
     ? formatHealthBucketTooltip(hoveredLatencyBucket, "latency")
     : null;
@@ -529,7 +535,8 @@ const NodeHealthSection = memo(function NodeHealthSection({
           )}
           <HealthBucketTooltip
             text={latencyTooltip}
-            index={hoveredLatencyIndex}
+            index={hoveredLatency?.index ?? null}
+            fraction={hoveredLatency?.fraction ?? null}
             count={pingBuckets.length}
           />
         </div>
@@ -583,7 +590,8 @@ const NodeHealthSection = memo(function NodeHealthSection({
           )}
           <HealthBucketTooltip
             text={lossTooltip}
-            index={hoveredLossIndex}
+            index={hoveredLoss?.index ?? null}
+            fraction={hoveredLoss?.fraction ?? null}
             count={pingBuckets.length}
           />
         </div>

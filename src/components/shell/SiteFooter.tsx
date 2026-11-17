@@ -15,7 +15,7 @@ import { t } from "@/i18n";
  */
 
 const BACKEND_REPO_URL = "https://github.com/huilang-me/CF-Server-Monitor";
-const THEME_REPO_URL = "https://github.com/G1oow/CFSM-Theme-AnotherLuminaPlus";
+const THEME_REPO_URL = "https://github.com/G1oow/CFSM-Theme-LuminaLite";
 const THEME_CHANGELOG_URL = `${THEME_REPO_URL}/commits/dist`;
 const CFSM_VERSION_STORAGE_KEY = "cfsmtheme:version";
 

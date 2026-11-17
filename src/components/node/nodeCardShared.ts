@@ -97,15 +97,8 @@ export function nodeDetailLinkLabels(name: string, osName: string) {
 /** 极小但非零流量只显示一段内的细提示，避免夸大用量。 */
 export const TRAFFIC_SLIVER_RATIO = 0.1;
 
-// LatencyBars(延迟)和 QualityBars(丢包)共享的柱状条几何/命中检测。两者都渲染
-// 定数量的 canvas 柱子行,所以 slot 计算和柱宽/间距必须保持一致。
-
-/** 指针 offset 落在哪个 slot(0..count-1),没有柱子时返回 null。 */
-export function getBarSlot(offsetX: number, width: number, count: number): number | null {
-  if (count === 0 || width <= 0) return null;
-  const slotWidth = width / count;
-  return Math.max(0, Math.min(count - 1, Math.floor(offsetX / slotWidth)));
-}
+// LatencyBars(延迟) / QualityBars(丢包) 共享的柱状条几何与命中检测。两者都渲染定数量的
+// canvas 柱子行，所以柱宽、间距、命中判定必须来自同一套几何（见 getBarGeometry / getBarHit）。
 
 /** 柱间间距的 CSS 像素值；柱子多的时候收窄，避免整排太挤。 */
 function barGapCss(count: number) {
@@ -121,6 +114,8 @@ export interface BarTrackGeometry {
   barWidth: number;
   /** 整排未用掉的设备像素，左右各留一半。 */
   extra: number;
+  /** 整排位图宽度（设备像素）；把柱心换算成 0..1 比例时要用。 */
+  pixelWidth: number;
 }
 
 export function getBarGeometry(width: number, count: number, dpr = 1): BarTrackGeometry {
@@ -133,7 +128,13 @@ export function getBarGeometry(width: number, count: number, dpr = 1): BarTrackG
   }
   const inner = Math.max(total, pixelWidth - gap * (total - 1));
   const barWidth = Math.floor(inner / total);
-  return { count: total, gap, barWidth, extra: Math.max(0, pixelWidth - (barWidth * total + gap * (total - 1))) };
+  return {
+    count: total,
+    gap,
+    barWidth,
+    extra: Math.max(0, pixelWidth - (barWidth * total + gap * (total - 1))),
+    pixelWidth,
+  };
 }
 
 /** 柱子等宽、等距，余下设备像素居中留白；返回 CSS 像素供已按 dpr 缩放的 canvas 使用。 */
@@ -146,6 +147,43 @@ export function snapBarRect(
   const slot = Math.min(Math.max(0, Math.floor(index)), count - 1);
   const left = Math.floor(extra / 2) + slot * (barWidth + gap);
   return { x: left / dpr, width: barWidth / dpr };
+}
+
+/** 指针落在哪根柱子，以及这根柱子中心占整条宽度的比例（0..1）。 */
+export interface BarHit {
+  index: number;
+  /** 柱心相对可画区域宽度的比例，浮层锚点用它，保证箭头压在高亮的那根柱子上。 */
+  fraction: number;
+}
+
+/**
+ * 命中检测按绘制用的几何反算。
+ *
+ * 旧实现是 `Math.floor(offsetX / (width / count))` —— 把整条宽度按柱数均分；可柱子两端各留了
+ * 余数的一半、柱间还有固定间距，两者并不重合。指针压在某根柱子左半边时算出的 index 会偏到右边
+ * 那根，于是「突起的光柱」和「详细信息」一起偏离指针。这里按「离哪根柱心最近」取整，再把该柱
+ * 中心换算成比例，命中 / 高亮 / 浮层共用同一套坐标。
+ */
+export function getBarHit(
+  offsetX: number,
+  width: number,
+  count: number,
+  dpr = 1,
+): BarHit | null {
+  if (!(count > 0) || !(width > 0)) return null;
+  const geometry = getBarGeometry(width, count, dpr);
+  const { count: total, gap, barWidth, extra } = geometry;
+  const gutter = Math.floor(extra / 2);
+  const step = barWidth + gap;
+  const raw = Math.round((offsetX * dpr - gutter - barWidth / 2) / step);
+  const index = Math.max(0, Math.min(total - 1, raw));
+  const center = gutter + index * step + barWidth / 2;
+  // 比例要按 canvas 元素的总宽算：浮层是 `left: <pct>%`，参照的是元素而不是可画区域，
+  // 所以得把两端各一个设备像素的留白加回来，否则箭头会整体偏半个像素到一像素。
+  const inset = Math.min(width / 2, 1 / dpr);
+  const cssWidth = width + inset * 2;
+  const fraction = cssWidth > 0 ? (inset + center / dpr) / cssWidth : 0;
+  return { index, fraction: Math.max(0, Math.min(1, fraction)) };
 }
 
 /** 柱顶同样对齐设备像素：底边本来就落在整数上,顶边压在半像素时会糊成一条淡像素。 */

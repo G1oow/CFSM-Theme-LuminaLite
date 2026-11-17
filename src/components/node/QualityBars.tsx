@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
-import { CanvasStrip, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
+import { CanvasStrip, barCornerRadius, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
 import {
   getBarGeometry,
-  getBarSlot,
+  getBarHit,
   healthBarInteractionModel,
   healthBarSlotModel,
   snapBarRect,
@@ -19,7 +19,7 @@ interface QualityBarsProps {
   buckets: PingOverviewBucket[];
   redrawKey?: string;
   height?: number;
-  onHoverIndex?: (index: number | null) => void;
+  onHoverIndex?: (index: number | null, fraction: number | null) => void;
   lossThresholds?: PingLossThresholds;
   lossColors?: PingLossColors;
 }
@@ -52,7 +52,7 @@ export function QualityBars({
   );
 
   const getHoverIndex = useCallback(
-    (offsetX: number, width: number) => getBarSlot(offsetX, width, bars.length),
+    (offsetX: number, width: number, dpr: number) => getBarHit(offsetX, width, bars.length, dpr),
     [bars],
   );
 
@@ -72,7 +72,7 @@ export function QualityBars({
         const barHeight = Math.max(1 / dpr, height - top);
         ctx.globalAlpha = visual.alpha;
         ctx.fillStyle = tone;
-        fillRoundedRect(ctx, x, top, barWidth, barHeight, 2);
+        fillRoundedRect(ctx, x, top, barWidth, barHeight, barCornerRadius(barWidth, barHeight, dpr));
       });
 
       ctx.globalAlpha = 1;

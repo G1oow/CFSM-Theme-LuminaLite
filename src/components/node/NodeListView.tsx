@@ -9,7 +9,7 @@ import { usePreferences } from "@/hooks/usePreferences";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
-import { CanvasStrip, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
+import { CanvasStrip, barCornerRadius, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
 import { LatencyBars } from "./LatencyBars";
 import { HealthBucketTooltip } from "./HealthBucketTooltip";
 import { PingSparkline } from "./PingSparkline";
@@ -137,11 +137,11 @@ function ListGauge({
         const fill = Math.max(0, Math.min(1, activeSegments - i));
         ctx.globalAlpha = 0.55;
         ctx.fillStyle = inactive;
-        fillRoundedRect(ctx, x, 0, segWidth, height, 2);
+        fillRoundedRect(ctx, x, 0, segWidth, height, barCornerRadius(segWidth, height, dpr));
         if (fill > 0) {
           ctx.globalAlpha = 0.42 + fill * 0.56;
           ctx.fillStyle = active;
-          fillRoundedRect(ctx, x, 0, segWidth, height, 2);
+          fillRoundedRect(ctx, x, 0, segWidth, height, barCornerRadius(segWidth, height, dpr));
         }
       }
       ctx.globalAlpha = 1;
@@ -200,7 +200,13 @@ function ListLatency({
   buckets: Parameters<typeof LatencyBars>[0]["buckets"];
   redrawKey: string;
 }) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<{
+    index: number;
+    fraction: number | null;
+  } | null>(null);
+  const onHoverIndex = useCallback((index: number | null, fraction?: number | null) => {
+    setHovered(index == null ? null : { index, fraction: fraction ?? null });
+  }, []);
   const pingStyle = useThemeSettings().homepagePingStyle;
   const state = resolveListPingState(
     loadState,
@@ -208,7 +214,7 @@ function ListLatency({
     pingIsAssigned,
   );
   const status = formatListPingStatus(latency, state);
-  const hoveredBucket = hoveredIndex == null ? null : (buckets[hoveredIndex] ?? null);
+  const hoveredBucket = hovered == null ? null : (buckets[hovered.index] ?? null);
   const tooltip = hoveredBucket
     ? formatHealthBucketTooltip(hoveredBucket, "latency")
     : null;
@@ -233,17 +239,22 @@ function ListLatency({
             buckets={buckets}
             value={latency}
             height={16}
-            onHoverIndex={setHoveredIndex}
+            onHoverIndex={onHoverIndex}
           />
         ) : (
           <LatencyBars
             buckets={buckets}
             redrawKey={redrawKey}
             height={14}
-            onHoverIndex={setHoveredIndex}
+            onHoverIndex={onHoverIndex}
           />
         )}
-        <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={buckets.length} />
+        <HealthBucketTooltip
+          text={tooltip}
+          index={hovered?.index ?? null}
+          fraction={hovered?.fraction ?? null}
+          count={buckets.length}
+        />
       </span>
     </div>
   );

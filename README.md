@@ -63,7 +63,7 @@
 想装指定版本时，把下面这行地址填进后台的自定义主题 URL：
 
 ```
-https://github.com/G1oow/CFSM-Theme-AnotherLuminaPlus/tree/dist
+https://github.com/G1oow/CFSM-Theme-LuminaLite/tree/dist
 ```
 
 `dist` 是构建产物分支（源码在 `main`，别填错）。想锁定某一版，就把 `dist` 换成那一版产物提交的
@@ -190,7 +190,7 @@ volcano 还做了配套的 iOS 主屏小组件 [cfsm-egern-widget](https://githu
 | `preview` | `dist-preview` | 上线前验收，不影响 `dist` |
 
 验收流程：改动先推 `preview`，等 Actions 跑完，在后台把主题地址临时填成
-`https://github.com/G1oow/CFSM-Theme-AnotherLuminaPlus/tree/dist-preview` 看效果；确认没问题再合进 `main`。
+`https://github.com/G1oow/CFSM-Theme-LuminaLite/tree/dist-preview` 看效果；确认没问题再合进 `main`。
 
 产物提交的说明就是主题商店里的**版本标题与更新日志**，格式固定为：
 
