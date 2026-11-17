@@ -13,7 +13,7 @@
   <img alt="界面语言" src="https://img.shields.io/badge/%E7%95%8C%E9%9D%A2-%E4%B8%AD%20%2F%20EN-71717a?style=flat-square" />
 </p>
 
-[CF-Server-Monitor](https://github.com/huilang-me/CF-Server-Monitor) 的第三方监控主题。数据层来自 [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus)，界面、配色与动效来自 [CFSM-SAO](https://github.com/WAOR/CFSM-SAO)，本仓库把两者合成一套装完即用的主题。
+[CF-Server-Monitor](https://github.com/huilang-me/CF-Server-Monitor) 的第三方监控主题。本仓库 fork 自 Vegas7 的 [CFSM-Theme-AnotherLuminaPlus](https://github.com/Vegas7/CFSM-Theme-AnotherLuminaPlus)；再往上是 [volcano-1025](https://github.com/volcano-1025) 移植到 CFSM 的数据层 [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus)，外观、配色与动效来自 [WAOR](https://github.com/WAOR) 的 [CFSM-SAO](https://github.com/WAOR/CFSM-SAO)。
 
 > [!NOTE]
 > 主题商店里的 **LuminaPlus** 和 **CFSM-SAO** 是两个上游原版，不是本主题；本主题叫 **LuminaLite**。
@@ -236,7 +236,8 @@ npm run build       # 产物只含 index.html + assets/
 
 | 项目 | 作者 | 在本主题里的位置 |
 | --- | --- | --- |
-| [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus) | [volcano-1025](https://github.com/volcano-1025) | **直接上游**。本仓库从这里 fork：整套数据层改走后端公开 API、WebSocket 实时推送与轮询兜底、首页延迟柱的取数与校正、多线路与线路改名、主题设置自动同步到后端、产物分支与主题商店的发布流程 |
+| [CFSM-Theme-AnotherLuminaPlus](https://github.com/Vegas7/CFSM-Theme-AnotherLuminaPlus) | [Vegas7](https://github.com/Vegas7) | **直接上游**。本仓库从这里 fork：它在 LuminaPlus 的数据层之上把 SAO 的界面样式、配色与动效融合进来，「LuminaPlus 的数据 + SAO 的外观」这个组合是在这一层拼起来的 |
+| [CFSM-Theme-LuminaPlus](https://github.com/volcano-1025/CFSM-Theme-LuminaPlus) | [volcano-1025](https://github.com/volcano-1025) | 把 LuminaPlus 完整移植到 CF-Server-Monitor：整套数据层改走后端公开 API、WebSocket 实时推送与轮询兜底、首页延迟柱的取数与校正、多线路与线路改名、主题设置自动同步到后端、产物分支与主题商店的发布流程 |
 | [CFSM-SAO](https://github.com/WAOR/CFSM-SAO) | [WAOR](https://github.com/WAOR) | **本主题的「脸」**：首页问候语与指标总览、服务器集群状态区、卡片与页脚胶囊的样式、配色与开屏动效、设置页版式、资产悬浮入口、延迟 / 丢包 / 流量色谱 |
 | [Komari-Theme-LuminaPlus](https://github.com/shanyang242/Komari-Theme-LuminaPlus) | [Shanyang242](https://github.com/shanyang242)、codex、shark | LuminaPlus 的原作者。大 / 小 / 迷你 / 列表四种卡片、首页总览与分组筛选、资产统计、详情页图表这些功能与交互的最初设计 |
 | [komari-theme-Lumina](https://github.com/stqfdyr/komari-theme-Lumina) | [stqfdyr](https://github.com/stqfdyr) | LuminaPlus 的源头主题，上述设计与配色最早出自这里 |
