@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,7 +11,6 @@ import {
   Network,
   Pencil,
   Server,
-  Sparkles,
   Timer,
   X,
 } from "lucide-react";
@@ -221,7 +220,7 @@ interface OverviewMetricCards {
   uptime: boolean;
 }
 
-function HomeOverviewCards({
+function HomeClusterOverview({
   overview,
   costSummary,
   costLoading,
@@ -235,7 +234,7 @@ function HomeOverviewCards({
   metricCards,
   renewalReminderDays,
   renewalNodes,
-  dense,
+  sortControl,
   username,
   loggedIn,
   visibleNodes,
@@ -250,7 +249,7 @@ function HomeOverviewCards({
   overview: HomeOverview;
   costSummary: { remainingCny: number; totalOriginalPriceCny?: number } | null;
   costLoading: boolean;
-  dense: boolean;
+  sortControl: ReactNode;
   showOverviewRatings: boolean;
   showBandwidthRating: boolean;
   bandwidthRatingLabels: string;
@@ -363,77 +362,80 @@ function HomeOverviewCards({
   );
 
   return (
-    <section
-      className={`mao-dashboard-hero home-overview${dense ? " is-dense" : ""}`}
-      aria-label={t("首页总览")}
-      data-stat-cards={statCardCount}
-      data-palette={matrixColorTheme || "default"}
-    >
-      {/* 左侧主要区域：问候语 + 6 宫格指标小卡片 */}
-      <div className="mao-hero-main">
-        <div className="mao-hero-header">
+    <>
+      {/* 服务器集群标题区：左侧挂着问候语与说明，右侧是总览指标卡（宽屏一行，窄屏自动换行） */}
+      <div
+        className="mao-section-header"
+        data-stat-cards={statCardCount}
+        data-palette={matrixColorTheme || "default"}
+      >
+        <div className="mao-section-top-row">
           <div className="mao-badge">
-            <Sparkles size={12} className="text-(--text-primary)" />
-            <span>{t("监控总览")}</span>
+            <Server size={12} className="text-(--text-primary)" />
+            <span>{t("服务器集群")}</span>
           </div>
-          <h1 className="mao-hero-greeting flex items-center gap-1.5 flex-wrap">
-            <span>{greetingInfo.greeting}{t("，")}</span>
-            {isEditingName ? (
-              <span className="inline-flex items-center gap-1">
-                <input
-                  type="text"
-                  autoFocus
-                  maxLength={40}
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveName();
-                    if (e.key === "Escape") setIsEditingName(false);
-                  }}
-                  placeholder={t("输入昵称 (如 jerry)")}
-                  className="px-2 py-0.5 text-base rounded bg-(--input-bg,rgba(0,0,0,0.3)) border border-(--accent) text-(--text-primary) focus:outline-none w-36"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveName}
-                  className="p-1 rounded bg-(--accent) text-white font-medium hover:opacity-90 transition-opacity"
-                  title={t("保存")}
-                >
-                  <Check size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingName(false)}
-                  className="p-1 rounded bg-white/10 text-(--text-muted) hover:text-(--text-primary) transition-colors"
-                  title={t("取消")}
-                >
-                  <X size={14} />
-                </button>
-              </span>
-            ) : (
-              <span
-                className={`inline-flex items-center gap-1.5 group ${loggedIn ? "cursor-pointer" : ""}`}
-                onClick={loggedIn ? handleStartEdit : undefined}
-                title={loggedIn ? t("点击快速修改管理员昵称") : undefined}
-              >
-                <DiaTextReveal text={username || "Guest"} />
-                {loggedIn && (
-                  <Pencil
-                    size={13}
-                    className="text-(--text-muted) opacity-0 group-hover:opacity-80 hover:text-(--accent) transition-all"
+          {sortControl && (
+            <div className="mao-section-header-actions">{sortControl}</div>
+          )}
+        </div>
+        <div className="mao-section-head-grid">
+          <div className="mao-section-title-wrap">
+            <h2 className="mao-section-greeting flex items-center gap-1.5 flex-wrap">
+              <span>{greetingInfo.greeting}{t("，")}</span>
+              {isEditingName ? (
+                <span className="inline-flex items-center gap-1">
+                  <input
+                    type="text"
+                    autoFocus
+                    maxLength={40}
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveName();
+                      if (e.key === "Escape") setIsEditingName(false);
+                    }}
+                    placeholder={t("输入昵称 (如 jerry)")}
+                    className="px-2 py-0.5 text-base rounded bg-(--input-bg,rgba(0,0,0,0.3)) border border-(--accent) text-(--text-primary) focus:outline-none w-36"
                   />
-                )}
-              </span>
-            )}
-          </h1>
-          <p className="mao-hero-subtitle">
-            {greetingInfo.subtitle}
-          </p>
+                  <button
+                    type="button"
+                    onClick={handleSaveName}
+                    className="p-1 rounded bg-(--accent) text-white font-medium hover:opacity-90 transition-opacity"
+                    title={t("保存")}
+                  >
+                    <Check size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingName(false)}
+                    className="p-1 rounded bg-white/10 text-(--text-muted) hover:text-(--text-primary) transition-colors"
+                    title={t("取消")}
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ) : (
+                <span
+                  className={`inline-flex items-center gap-1.5 group ${loggedIn ? "cursor-pointer" : ""}`}
+                  onClick={loggedIn ? handleStartEdit : undefined}
+                  title={loggedIn ? t("点击快速修改管理员昵称") : undefined}
+                >
+                  <DiaTextReveal text={username || "Guest"} />
+                  {loggedIn && (
+                    <Pencil
+                      size={13}
+                      className="text-(--text-muted) opacity-0 group-hover:opacity-80 hover:text-(--accent) transition-all"
+                    />
+                  )}
+                </span>
+              )}
+            </h2>
+            <p className="mao-section-sub">{greetingInfo.subtitle}</p>
         </div>
 
-        {/* 指标卡片（最多 6 张，可在设置里逐张关掉）：data-cards 是实际张数，CSS 按张数排版，避免留空格 */}
+        {/* 指标卡片（最多 6 张，可在设置里逐张关掉）：data-cards 是实际张数，放不下自动换行 */}
         {statCardCount > 0 && (
-        <div className="mao-stat-grid" data-cards={statCardCount}>
+        <div className="mao-stat-grid is-inline" data-cards={statCardCount}>
           {/* 1. 活跃连接 (全站活跃连接数) */}
           {metricCards.connections && (
           <div className="mao-stat-card" data-metric="connections">
@@ -594,13 +596,12 @@ function HomeOverviewCards({
         </div>
         )}
       </div>
-
-      {/* 右侧集群状态区域 */}
-      <div className="mao-hero-side">
-        <div
-          className="mao-progress-container"
-          data-palette={matrixColorTheme || "default"}
-        >
+      </div>
+      {/* 集群状态：并进服务器集群卡片，标题下方通栏 */}
+      <div
+        className="mao-progress-container is-wide"
+        data-palette={matrixColorTheme || "default"}
+      >
           <div className="mao-progress-head">
             <div className="mao-progress-title-wrap">
               <h3 className="mao-progress-title">
@@ -633,6 +634,7 @@ function HomeOverviewCards({
           </div>
 
           {/* 根据集群状态展示设置，分别呈现「经典布局」或「独立全屏版面」 */}
+          <div className="mao-progress-body" data-mode={clusterOverviewMode}>
           {clusterOverviewMode === "classic" ? (
             <>
               {/* 进度模块 1：服务器在线状态 */}
@@ -728,7 +730,7 @@ function HomeOverviewCards({
           )}
         </div>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -1158,45 +1160,11 @@ export function NodeGrid() {
     );
   }
 
-  // 资产页悬浮入口 + 首页概览卡在「空节点」与正常两个分支里完全一致，提取一次复用。
+  // 资产页悬浮入口与站点标题在「空节点」与正常两个分支里完全一致，提取一次复用。
   const homeHeader = (
     <>
       {showCostFloatingButton && <DraggableCostBall />}
       <HomeBrand siteName={siteName} />
-      {showHomeOverview && (
-        <HomeOverviewCards
-          overview={overview}
-          dense={mode === "mini" || mode === "list"}
-          showDetailButton={showCostDetailButton}
-          showAssetCard={showAssetCard}
-          metricCards={overviewMetricCards}
-          renewalReminderDays={
-            themeSettings.isReady ? themeSettings.renewalReminderDays : 0
-          }
-          renewalNodes={renewalNodes}
-          costSummary={costSummary}
-          costLoading={costLoading}
-          showOverviewRatings={themeSettings.showOverviewRatings}
-          showBandwidthRating={themeSettings.showBandwidthRating}
-          bandwidthRatingLabels={themeSettings.bandwidthRatingLabels}
-          showAssetRating={themeSettings.showAssetRating}
-          assetRatingLabels={themeSettings.assetRatingLabels}
-          username={
-            me?.logged_in
-              ? (themeSettings.adminNickname?.trim() || me?.username || "Admin")
-              : "Guest"
-          }
-          loggedIn={Boolean(me?.logged_in)}
-          visibleNodes={visibleNodes}
-          nameByUuid={nameByUuid}
-          clusterOverviewMode={themeSettings.clusterOverviewMode}
-          matrixColorTheme={themeSettings.matrixColorTheme}
-          matrixMockFill={themeSettings.matrixMockFill}
-          matrixBootAnimation={themeSettings.matrixBootAnimation}
-          matrixBootEffect={themeSettings.matrixBootEffect}
-          matrixCustomPattern={themeSettings.matrixCustomPattern}
-        />
-      )}
     </>
   );
 
@@ -1221,25 +1189,38 @@ export function NodeGrid() {
         data-palette={themeSettings.matrixColorTheme || "default"}
       >
         {showHomeOverview && (
-          <div className="mao-section-header">
-            <div className="mao-section-top-row">
-              <div className="mao-badge">
-                <Server size={12} className="text-(--text-primary)" />
-                <span>{t("服务器集群")}</span>
-              </div>
-              {showHomeSort && (
-                <div className="mao-section-header-actions">
-                  <HomeSortControl state={sort} />
-                </div>
-              )}
-            </div>
-            <div className="mao-section-title-wrap">
-              <h2 className="mao-section-title">{t("服务器矩阵与实时监控")}</h2>
-              <p className="mao-section-sub">
-                {t("实时监控服务器负载、资源占用、网络吞吐与在线状态。")}
-              </p>
-            </div>
-          </div>
+          <HomeClusterOverview
+            overview={overview}
+            sortControl={showHomeSort ? <HomeSortControl state={sort} /> : null}
+            showDetailButton={showCostDetailButton}
+            showAssetCard={showAssetCard}
+            metricCards={overviewMetricCards}
+            renewalReminderDays={
+              themeSettings.isReady ? themeSettings.renewalReminderDays : 0
+            }
+            renewalNodes={renewalNodes}
+            costSummary={costSummary}
+            costLoading={costLoading}
+            showOverviewRatings={themeSettings.showOverviewRatings}
+            showBandwidthRating={themeSettings.showBandwidthRating}
+            bandwidthRatingLabels={themeSettings.bandwidthRatingLabels}
+            showAssetRating={themeSettings.showAssetRating}
+            assetRatingLabels={themeSettings.assetRatingLabels}
+            username={
+              me?.logged_in
+                ? (themeSettings.adminNickname?.trim() || me?.username || "Admin")
+                : "Guest"
+            }
+            loggedIn={Boolean(me?.logged_in)}
+            visibleNodes={visibleNodes}
+            nameByUuid={nameByUuid}
+            clusterOverviewMode={themeSettings.clusterOverviewMode}
+            matrixColorTheme={themeSettings.matrixColorTheme}
+            matrixMockFill={themeSettings.matrixMockFill}
+            matrixBootAnimation={themeSettings.matrixBootAnimation}
+            matrixBootEffect={themeSettings.matrixBootEffect}
+            matrixCustomPattern={themeSettings.matrixCustomPattern}
+          />
         )}
         {(sortInControlsBar || showGroupTabs) && (
           <div className={controlsWrapClassName} style={controlsStyle}>

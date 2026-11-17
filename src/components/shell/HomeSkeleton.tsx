@@ -8,50 +8,32 @@ import { memo } from "react";
 export const HomeSkeleton = memo(function HomeSkeleton() {
   return (
     <div className="home-skeleton-container space-y-6 animate-pulse" aria-hidden="true">
-      {/* 问候语占位 */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="h-6 w-44 rounded-lg bg-(--bg-card) opacity-75" />
-        <div className="h-5 w-28 rounded-md bg-(--bg-card) opacity-50" />
-      </div>
-
-      {/* 监控总览双栏骨架 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* 左栏：核心指标区 (6格) */}
-        <div className="rounded-2xl border border-(--border-subtle) bg-(--bg-card) p-4 shadow-sm lg:col-span-7">
-          <div className="mb-3.5 flex items-center justify-between">
-            <div className="h-4 w-20 rounded bg-(--border-subtle) opacity-70" />
-            <div className="h-3.5 w-16 rounded bg-(--border-subtle) opacity-50" />
+      {/* 服务器集群卡片：标题区（问候语 + 指标卡）与集群状态 */}
+      <div className="rounded-2xl border border-(--border-subtle) bg-(--bg-card) p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="h-5 w-24 rounded-full bg-(--border-subtle) opacity-70" />
+          <div className="h-7 w-20 rounded-lg bg-(--bg-surface) opacity-60" />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="h-5 w-40 max-w-full rounded-lg bg-(--border-subtle) opacity-75" />
+            <div className="h-4 w-56 max-w-full rounded bg-(--border-subtle) opacity-50" />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="flex flex-col gap-2 rounded-xl border border-(--border-subtle) bg-(--bg-surface) p-3"
+                className="flex h-16 flex-col justify-between rounded-xl border border-(--border-subtle) bg-(--bg-surface) p-2.5"
               >
-                <div className="h-3 w-12 rounded bg-(--border-subtle) opacity-60" />
-                <div className="h-5 w-20 rounded bg-(--border-subtle) opacity-80" />
+                <div className="h-3 w-10 rounded bg-(--border-subtle) opacity-60" />
+                <div className="h-4 w-14 rounded bg-(--border-subtle) opacity-80" />
               </div>
             ))}
           </div>
         </div>
-
-        {/* 右栏：集群状态区 */}
-        <div className="flex flex-col justify-between rounded-2xl border border-(--border-subtle) bg-(--bg-card) p-4 shadow-sm lg:col-span-5">
-          <div>
-            <div className="mb-3.5 flex items-center justify-between">
-              <div className="h-4 w-24 rounded bg-(--border-subtle) opacity-70" />
-              <div className="h-4 w-12 rounded bg-(--border-subtle) opacity-50" />
-            </div>
-            <div className="grid grid-cols-10 gap-1.5 py-2">
-              {Array.from({ length: 20 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-3.5 rounded-sm bg-(--border-subtle) opacity-50"
-                />
-              ))}
-            </div>
-          </div>
-          <div className="mt-4 h-12 w-full rounded-lg bg-(--bg-surface) opacity-60" />
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="h-16 rounded-xl bg-(--bg-surface) opacity-60" />
+          <div className="h-16 rounded-xl bg-(--bg-surface) opacity-60 sm:col-span-2" />
         </div>
       </div>
 
