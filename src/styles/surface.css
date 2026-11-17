@@ -255,23 +255,25 @@
   height: 36px;
 }
 
-/* 快捷栏的展开 / 收起只动 transform 与 opacity（合成层上跑，不触发布局，移动端也稳）：
-   展开时像从箭头按钮后面滑出来，收起时同样滑回去。之前补间的是 max-width（0 → 600px 的钳制值），
-   实际内容只有一两百像素，前半段画面几乎没变化，看起来就像先卡一下再「啪」地弹开。 */
+/* 快捷栏的展开 / 收起只动 translate 与 opacity（合成层上跑，不触发布局，移动端也稳）：
+   展开时像从箭头按钮后面滑出来，收起时同样滑回去。
+   这里刻意不再用 scale()：缩放会让整条按钮（含 SVG 图标）每帧重新栅格化，图标发虚；
+   也不再靠 translateY(-50%) 居中 —— 半个像素的偏移配合 overflow 会把按钮底部削掉一条。 */
 .floating-controls-actions {
   position: absolute;
-  top: 50%;
+  top: 0;
   right: calc(100% + 8px);
   display: inline-flex;
+  height: 100%;
   width: max-content;
   max-width: min(600px, calc(100vw - 4.5rem));
   align-items: center;
   gap: 8px;
-  overflow: hidden;
   opacity: 1;
-  transform: translateY(-50%) translateX(0) scale(1);
+  transform: translate3d(0, 0, 0);
   transform-origin: right center;
   visibility: visible;
+  will-change: transform, opacity;
   /* 展开：偏慢、先快后缓，滑到位时正好淡入完成 */
   transition:
     opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -295,9 +297,9 @@
   flex: 0 0 auto;
   height: 36px;
   display: inline-flex;
+
   align-items: center;
   gap: 2px;
-  padding: 2px;
   box-sizing: border-box;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
@@ -332,7 +334,7 @@
 .floating-controls.is-collapsed .floating-controls-actions {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%) translateX(14px) scale(0.94);
+  transform: translate3d(14px, 0, 0);
   /* 收起比展开快半拍：干脆地滑回按钮后面，等淡出结束再彻底隐藏，不留一块看不见的热区 */
   visibility: hidden;
   transition:
@@ -343,6 +345,7 @@
 
 /* 箭头本身也跟着转 180°：收 / 放时不再是图标「啪」地一换，而是和快捷栏一起转过去 */
 .floating-controls-trigger-icon {
+  will-change: transform;
   transition: transform 200ms cubic-bezier(0.4, 0, 0.8, 1);
 }
 

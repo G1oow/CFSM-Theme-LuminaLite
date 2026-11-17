@@ -135,24 +135,89 @@
    ========================================================================== */
 
 
-.mao-badge {
-  display: inline-flex;
+/* 首页标题行左侧的问候语（取代原来的「服务器集群」徽章） */
+.mao-greeting-wrap {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  width: fit-content;
+  min-width: 0;
 }
 
-:root[data-appearance="dark"] .mao-badge {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.1);
+.mao-greeting {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 750;
+  letter-spacing: -0.012em;
   color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.mao-greeting-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mao-greeting-name.is-editable {
+  cursor: pointer;
+}
+
+.mao-greeting-pencil {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.mao-greeting-name.is-editable:hover .mao-greeting-pencil {
+  opacity: 0.9;
+}
+
+.mao-greeting-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mao-greeting-input {
+  width: 136px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--input-bg, rgba(0, 0, 0, 0.12));
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+}
+
+.mao-greeting-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 140ms ease;
+}
+
+.mao-greeting-btn.is-save {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.mao-greeting-btn.is-cancel {
+  background: rgba(127, 127, 127, 0.18);
+  color: var(--text-tertiary);
+}
+
+.mao-greeting-btn:hover {
+  filter: brightness(1.08);
 }
 
 
@@ -304,7 +369,10 @@
   min-height: 96px;
   height: 100%;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-  transition: all 180ms ease;
+  /* 只过渡真正会变的属性；配 translateZ(0) 让整卡提前成层，避免悬停时重新栅格化图标 */
+  transform: translateZ(0);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 :root[data-appearance="dark"] .mao-stat-card {
@@ -316,7 +384,7 @@
 .mao-stat-card:hover {
   border-color: rgba(0, 0, 0, 0.12);
   box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
 }
 
 :root[data-appearance="dark"] .mao-stat-card:hover {
@@ -329,6 +397,42 @@
 .mao-stat-card.is-popover-open {
   z-index: 80;
   position: relative;
+}
+
+/* 指标卡柔光：光斑独立成层，只动坐标与透明度，卡片内容不参与重绘 */
+.mao-spotlight {
+  position: relative;
+}
+
+.mao-spotlight > :not(.mao-spotlight-layer) {
+  position: relative;
+  z-index: 1;
+}
+
+.mao-spotlight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--spotlight-opacity, 0);
+  transition: opacity 260ms ease;
+  background: radial-gradient(
+    var(--spotlight-radius, 420px) circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    var(--spotlight-color, rgba(37, 99, 235, 0.22)),
+    transparent 62%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+/* 深色主题：indigo-500 #6366f1 × 22% */
+:root[data-appearance="dark"] .mao-spotlight-layer {
+  --spotlight-color: rgba(99, 102, 241, 0.22);
+}
+  .mao-spotlight-layer {
+    display: none;
+  }
 }
 
 .mao-stat-head {
@@ -353,8 +457,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--current-metric-color);
-  transition: all 180ms ease;
+  color: inherit;
+  transition: border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
 }
 
 .mao-stat-icon-svg {
@@ -362,28 +466,6 @@
   color: currentColor;
 }
 
-/* 7 种指标类型的色值绑定（标准化体系） */
-.mao-stat-icon-connections {
-  --current-metric-color: var(--metric-connections-color);
-}
-.mao-stat-icon-cpu {
-  --current-metric-color: var(--metric-cpu-color);
-}
-.mao-stat-icon-ram {
-  --current-metric-color: var(--metric-ram-color);
-}
-.mao-stat-icon-disk {
-  --current-metric-color: var(--metric-disk-color);
-}
-.mao-stat-icon-traffic {
-  --current-metric-color: var(--metric-traffic-color);
-}
-.mao-stat-icon-uptime {
-  --current-metric-color: var(--metric-uptime-color);
-}
-.mao-stat-icon-asset {
-  --current-metric-color: var(--metric-asset-color);
-}
 
 /* 浅色模式：保持无微底框状态 (纯矢量图标，颜色与深色模式保持 100% 同步对应) */
 :root:not([data-appearance="dark"]) .mao-stat-icon-hud {
@@ -434,7 +516,6 @@
 :root[data-appearance="dark"] .mao-stat-card:hover .mao-stat-icon-hud {
   border-color: color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 50%, transparent);
   box-shadow: 0 0 11px color-mix(in srgb, var(--current-metric-color, var(--text-primary)) 45%, transparent);
-  transform: translateY(-0.5px) scale(1.04);
 }
 
 
@@ -2069,12 +2150,6 @@
   flex-shrink: 0;
 }
 
-.mao-section-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .mao-section-title {
   font-size: 18px;
   font-weight: 800;
@@ -2083,47 +2158,41 @@
   margin: 0;
 }
 
-.mao-section-sub {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin: 0;
-  line-height: 1.4;
-}
-
-/* 服务器集群标题区：左侧问候语与说明，右侧总览指标卡（宽屏一行铺满，放不下自动换行） */
+/* 服务器集群标题区：左侧读数方阵 + 可拖拽分栏手柄 + 右侧集群状态 */
 .mao-section-head-grid {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 24px;
+  align-items: stretch;
   width: 100%;
 }
 
-.mao-section-head-grid > .mao-section-title-wrap {
-  flex: 0 1 auto;
-  max-width: 460px;
-  min-width: 0;
-}
-
-.mao-section-greeting {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 750;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
-  color: var(--text-primary);
-}
-
-/* 标题区里的指标卡：卡片比独立总览时更紧凑；宽度不够时宁可两行，也不让说明文字被截断 */
+/* 标题区里的指标卡：固定 3 列 × 2 行，行高随左栏高度铺满 */
 .mao-stat-grid.is-inline,
 .mao-stat-grid.is-inline[data-cards] {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(120px, 1fr);
   gap: 8px;
-  flex: 1 1 620px;
-  width: auto;
+  flex: 1 1 auto;
+  height: 100%;
+  width: 100%;
   min-width: 0;
+}
+
+/* 窄屏：分栏取消，单列堆叠 */
+@media (max-width: 900px) {
+  .mao-section-head-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mao-section-head-main,
+  .mao-section-head-grid > .mao-progress-container.is-charts {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .mao-column-split {
+    display: none;
+  }
 }
 
 /* 按张数跨列的旧规则在标题区里一律复位，每行几张由上面的列数决定 */
@@ -2131,48 +2200,323 @@
   grid-column: auto;
 }
 
+/* 指标卡：3 列两行铺满左栏，行高跟着左栏高度自适应，和右侧集群状态始终同高 */
 .mao-stat-grid.is-inline .mao-stat-card {
+  height: 100%;
   min-height: 0;
-  height: auto;
+  justify-content: space-between;
+  gap: 2px;
   padding: 10px 12px;
   border-radius: 12px;
 }
 
+
+/* 左右分栏手柄：平时几乎看不见，hover / 拖拽 / 键盘聚焦时显形 */
+.mao-column-split {
+  display: flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  cursor: col-resize;
+  touch-action: none;
+  /* 平时完全不占视觉，只在指针悬停 / 键盘聚焦 / 拖拽时现身 */
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+/* 点点状握把：铺满整列，与两侧卡片同高 */
+.mao-column-split-grip {
+  display: block;
+  width: 8px;
+  height: 100%;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text-tertiary) 95%, transparent) 1.6px,
+    transparent 1.7px
+  );
+  background-position: center top;
+  background-size: 8px 7px;
+  background-repeat: repeat-y;
+}
+.mao-column-split:hover,
+.mao-column-split:focus-visible,
+.mao-column-split.is-dragging {
+  opacity: 1;
+}
+
+.mao-column-split.is-dragging {
+  background: color-mix(in srgb, var(--text-tertiary) 8%, transparent);
+}
+
+.mao-column-split:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 拖拽分栏时整页禁用选中与光标抖动 */
+body.is-resizing-columns {
+  cursor: col-resize;
+  user-select: none;
+}
 .mao-stat-grid.is-inline .mao-stat-label {
-  font-size: 11.5px;
-}
-
-.mao-stat-grid.is-inline .mao-stat-value {
-  font-size: 15.5px;
-  margin: 4px 0 1px;
-}
-
-.mao-stat-grid.is-inline .mao-stat-caption {
   font-size: 10.5px;
 }
 
-@media (max-width: 1499px) {
-  .mao-stat-grid.is-inline,
-  .mao-stat-grid.is-inline[data-cards] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* 窄屏堆叠时手柄不出现（写在基础样式之后，压过上面的 display: flex） */
+@media (max-width: 900px) {
+  .mao-section-head-grid .mao-column-split {
+    display: none;
   }
+}
+
+.mao-stat-grid.is-inline .mao-stat-value {
+  font-size: 14px;
+  margin: 2px 0 0;
+}
+
+.mao-stat-grid.is-inline .mao-stat-caption {
+  font-size: 10px;
+  line-height: 1.25;
 }
 
 @media (max-width: 640px) {
+  /* 小屏两列，方块退成小矩形：按宽度算出来的正方形会撑到 200px */
   .mao-stat-grid.is-inline,
   .mao-stat-grid.is-inline[data-cards] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    height: auto;
+  }
+
+  .mao-stat-grid.is-inline .mao-stat-card {
+    min-height: 84px;
+  }
+
+  /* 图表卡片太窄时上下排，读数不会被截断（选择器要压过后面的两列规则） */
+  .mao-section-head-grid .mao-progress-container.is-charts .mao-realtime-charts-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
-
 @media (max-width: 768px) {
   .mao-section-head-grid {
     gap: 10px;
   }
+}
 
-  .mao-section-head-grid > .mao-section-title-wrap {
-    max-width: 100%;
-  }
+/* 服务器集群标题行右侧：状态胶囊 + 排序按钮 */
+.mao-section-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-width: 0;
+}
+
+/* 状态胶囊：hover / focus 弹出集群详情 */
+.mao-cluster-status {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mao-cluster-status-trigger {
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 140ms ease;
+}
+
+.mao-cluster-status-trigger:hover,
+.mao-cluster-status-trigger[aria-expanded="true"] {
+  filter: brightness(1.1);
+}
+
+.mao-cluster-panel {
+  right: 0;
+  left: auto;
+  width: min(320px, calc(100vw - 32px));
+  transform-origin: top right;
+}
+
+.mao-cluster-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 8px;
+}
+
+.mao-cluster-panel-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+
+.mao-cluster-panel-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.mao-cluster-panel-count[data-tone="is-warning"] {
+  color: var(--status-warning);
+}
+
+.mao-cluster-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px 8px;
+  max-height: 246px;
+  overflow-y: auto;
+}
+
+.mao-cluster-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.mao-cluster-panel-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mao-cluster-panel-group {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.mao-cluster-panel-status {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--status-offline);
+}
+
+.mao-cluster-panel-note,
+.mao-cluster-panel-more {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+/* 标题区主体：3×2 读数方阵，宽度由 --split（拖拽手柄）决定 */
+.mao-section-head-main {
+  display: flex;
+  flex: 0 0 calc(var(--split, 45%) - 8px);
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 右侧集群状态：吃掉剩余宽度，与左栏同高 */
+.mao-section-head-grid > .mao-progress-container.is-charts {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* 右侧集群状态：上下行图表为主，读数退到卡片底部 */
+.mao-progress-container.is-charts {
+  height: auto;
+  gap: 8px;
+  padding: 10px 12px;
+  justify-content: flex-start;
+}
+
+.mao-progress-container.is-charts .mao-progress-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.mao-progress-container.is-charts .mao-network-section {
+  flex: 1 1 auto;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+/* 总带宽在图表底下另起一行，图里不再重复一次大数字 */
+.mao-progress-container.is-charts .mao-network-section > .mao-progress-section-header {
+  display: none;
+}
+
+/* 右栏变窄时也保持上下行两张图并排，不塌成一长条 */
+.mao-progress-container.is-charts .mao-realtime-charts-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: 100%;
+}
+
+.mao-progress-container.is-charts .mao-realtime-chart-card {
+  min-height: 0;
+  padding: 6px 9px 4px;
+}
+
+.mao-progress-container.is-charts .mao-realtime-chart-canvas-wrap {
+  /* 用固定高度兜底：canvas 位图尺寸会写回自身，高度全靠内容撑时会一路自增 */
+  height: 64px;
+  min-height: 64px;
+  flex: 1 1 auto;
+}
+.mao-cluster-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(127, 127, 127, 0.16);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.mao-cluster-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.mao-cluster-meta b {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 次要行里的迷你节点条 */
+.mao-node-blocks.is-compact {
+  flex: 1 1 auto;
+  min-width: 48px;
+  gap: 2px;
+  padding: 0;
+  min-height: 0;
+}
+
+.mao-node-blocks.is-compact .mao-node-block {
+  height: 6px;
+  border-radius: 1.5px;
 }
 
 .overview-card {
@@ -3768,7 +4112,6 @@
     gap: 12px;
   }
 
-  .mao-section-sub,
   .mao-progress-subtitle {
     font-size: 12px;
     white-space: nowrap;
