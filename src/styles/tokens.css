@@ -15,7 +15,8 @@
   --border: rgba(24, 24, 27, 0.08);
   --border-subtle: rgba(24, 24, 27, 0.05);
   --border-strong: rgba(24, 24, 27, 0.14);
-  --hairline: rgba(24, 24, 27, 0.07);
+  /* 卡片内分隔线：0.07 在纯白卡面上与背景几乎没有差值，浅色下分隔线等于消失 */
+  --hairline: rgba(24, 24, 27, 0.11);
 
   --text-primary: #18181b;
   --text-secondary: #52525b;

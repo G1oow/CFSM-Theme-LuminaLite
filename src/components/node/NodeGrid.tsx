@@ -10,13 +10,13 @@ import {
   Layers,
   Network,
   Pencil,
-  Server,
   Timer,
   X,
 } from "lucide-react";
 import { StatMetricIcon } from "../ui/StatMetricIcon";
 import { DraggableCostBall } from "@/components/node/DraggableCostBall";
 import { ClusterHeatmap } from "./ClusterHeatmap";
+import { ClusterStatusPill } from "./ClusterStatusPill";
 import { useAuth } from "@/hooks/useAuth";
 import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
 import {
@@ -31,7 +31,7 @@ import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useViewMode } from "@/hooks/useViewMode";
 import { usePriceVisibility } from "@/hooks/usePriceVisibility";
 import { getNodeMetricsSnapshot, type HomeNodeSummary } from "@/services/wsStore";
-import { formatBytes } from "@/utils/format";
+import { formatByteRate, formatBytes } from "@/utils/format";
 import { calculateCostSummary, getExchangeRates } from "@/utils/cost";
 import { useHiddenNodeUuids } from "@/hooks/useVisibleNodes";
 import {
@@ -58,14 +58,17 @@ import {
 import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCard } from "./NodeCard";
-import { OverviewTrafficChart } from "./OverviewTrafficChart";
 import { NodeListView } from "./NodeListView";
+import { OverviewTrafficChart } from "./OverviewTrafficChart";
 import { RegionTabs } from "./RegionTabs";
 import { RenewalReminder } from "./RenewalReminder";
 import type { NodeViewMode, ClusterOverviewMode, MatrixColorTheme, MatrixBootEffect } from "@/utils/themeSettings";
+import { ColumnSplitHandle, useColumnSplitRatio } from "./ColumnSplitHandle";
 import { getRenewalReminders, type RenewalReminderSource } from "@/utils/renewalReminder";
 import { DiaTextReveal } from "@/components/ui/DiaTextReveal";
 import { t, useLang } from "@/i18n";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MetricSparkline } from "./MetricSparkline";
 
 // 卡片视图网格密度；列表档由独立组件布局。
 const GRID_LAYOUT: Record<NodeViewMode, { className: string; minColumnWidth: number }> = {
@@ -127,6 +130,16 @@ function formatRebootAgo(seconds: number): { value: string; unit: string; fullTe
   return { value: String(minutes), unit: t("分钟前"), fullText: t("{n}分钟前", { n: minutes }) };
 }
 
+/** 按当前时段给出问候词（首页标题行左侧）。 */
+function getGreetingWord(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour >= 0 && hour < 5) return t("夜深了");
+  if (hour >= 5 && hour < 11) return t("早上好");
+  if (hour >= 11 && hour < 13) return t("中午好");
+  if (hour >= 13 && hour < 18) return t("下午好");
+  return t("晚上好");
+}
+
 function HomeBrand({ siteName }: { siteName: string }) {
   return (
     <header className="home-brand sr-only" aria-label={t("站点名称")}>
@@ -135,81 +148,6 @@ function HomeBrand({ siteName }: { siteName: string }) {
       </h1>
     </header>
   );
-}
-
-function getTimeGreetingInfo(
-  totalNodes: number,
-  onlineNodes: number,
-  offlineNodes: number,
-  renewalCount: number,
-): { greeting: string; subtitle: string } {
-  const hour = new Date().getHours();
-  let greeting = t("早上好");
-  if (hour >= 0 && hour < 5) greeting = t("夜深了");
-  else if (hour >= 5 && hour < 11) greeting = t("早上好");
-  else if (hour >= 11 && hour < 13) greeting = t("中午好");
-  else if (hour >= 13 && hour < 18) greeting = t("下午好");
-  else greeting = t("晚上好");
-
-  // 1. 存在离线异常时，精准贴合实际情况告警提示
-  if (totalNodes > 0 && offlineNodes > 0) {
-    if (onlineNodes === 0) {
-      return {
-        greeting,
-        subtitle: t("您的服务器已全部离线，请及时排查网络与连接状态。"),
-      };
-    }
-    return {
-      greeting,
-      subtitle: t("检测到 {n} 台服务器处于离线状态，请及时排查处理。", { n: offlineNodes }),
-    };
-  }
-
-  // 2. 暂未连接服务器
-  if (totalNodes === 0) {
-    return {
-      greeting,
-      subtitle: t("暂未检测到在线服务器，等待节点客户端数据上报。"),
-    };
-  }
-
-  // 3. 临期提醒（无离线节点但有临近到期节点）
-  if (renewalCount > 0) {
-    return {
-      greeting,
-      subtitle: t("当前有 {n} 台服务器临近到期，请留意续费维护。", { n: renewalCount }),
-    };
-  }
-
-  // 4. 全员在线健康：按时段给出贴切且长度均衡的生产/工作问候
-  if (hour >= 0 && hour < 5) {
-    return {
-      greeting,
-      subtitle: t("夜间全站服务器运行平稳，各项指标持续实时监控中。"),
-    };
-  }
-  if (hour >= 5 && hour < 11) {
-    return {
-      greeting,
-      subtitle: t("全站服务器运行健康，系统资源与网络指标持续监控中。"),
-    };
-  }
-  if (hour >= 11 && hour < 13) {
-    return {
-      greeting,
-      subtitle: t("当前所有服务器运行平稳，系统负载与核心指标持续采集中。"),
-    };
-  }
-  if (hour >= 13 && hour < 18) {
-    return {
-      greeting,
-      subtitle: t("所有服务器运行稳定，系统负载与网络吞吐持续监控中。"),
-    };
-  }
-  return {
-    greeting,
-    subtitle: t("全站服务器运行良好，网络状态与系统负载数据持续采集中。"),
-  };
 }
 
 interface OverviewMetricCards {
@@ -274,10 +212,11 @@ function HomeClusterOverview({
 }) {
   const queryClient = useQueryClient();
   const [renewalPopoverOpen, setRenewalPopoverOpen] = useState(false);
-  const statCardCount =
-    Object.values(metricCards).filter(Boolean).length + (showAssetCard ? 1 : 0);
+  const [splitRatio, setSplitRatio] = useColumnSplitRatio();
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
+  const greetingWord = getGreetingWord();
+
   const handleStartEdit = () => {
     if (!loggedIn) return;
     setTempName(username === "Admin" ? "" : username);
@@ -295,6 +234,19 @@ function HomeClusterOverview({
     }
     setIsEditingName(false);
   };
+  const statCardCount =
+    Object.values(metricCards).filter(Boolean).length + (showAssetCard ? 1 : 0);
+  // 离线节点明细：状态胶囊的悬停面板里要列具体是哪几台。
+  const offlineNodeList = useMemo(
+    () =>
+      visibleNodes
+        .filter((node) => node.online === false)
+        .map((node) => ({
+          name: nameByUuid.get(node.uuid)?.trim() || node.uuid,
+          group: getHomeGroupLabel(node.group),
+        })),
+    [nameByUuid, visibleNodes],
+  );
 
   const totalConnections = overview.totalTcpConn + overview.totalUdpConn;
   const [ramUsedValue, ramUsedUnit] = formatBytes(overview.totalRamUsed).split(" ");
@@ -349,58 +301,43 @@ function HomeClusterOverview({
       </span>
     ) : null;
 
-  const isAllHealthy = overview.offlineNodes === 0 && overview.totalNodes > 0;
   const renewalReminders = getRenewalReminders(renewalNodes, Date.now(), {
     requireOnlineForExpired: true,
   });
   const renewalCount = renewalReminders.length;
-  const greetingInfo = getTimeGreetingInfo(
-    overview.totalNodes,
-    overview.onlineNodes,
-    overview.offlineNodes,
-    renewalCount,
-  );
+  const totalBandwidth = formatByteRate(overview.netUp + overview.netDown);
 
   return (
     <>
-      {/* 服务器集群标题区：左侧挂着问候语与说明，右侧是总览指标卡（宽屏一行，窄屏自动换行） */}
+      {/* 服务器集群：标题行放徽章、状态胶囊与排序；下面左侧 3×2 指标卡，右侧 1×3 集群状态 */}
       <div
         className="mao-section-header"
         data-stat-cards={statCardCount}
         data-palette={matrixColorTheme || "default"}
       >
         <div className="mao-section-top-row">
-          <div className="mao-badge">
-            <Server size={12} className="text-(--text-primary)" />
-            <span>{t("服务器集群")}</span>
-          </div>
-          {sortControl && (
-            <div className="mao-section-header-actions">{sortControl}</div>
-          )}
-        </div>
-        <div className="mao-section-head-grid">
-          <div className="mao-section-title-wrap">
-            <h2 className="mao-section-greeting flex items-center gap-1.5 flex-wrap">
-              <span>{greetingInfo.greeting}{t("，")}</span>
+          <div className="mao-greeting-wrap">
+            <h2 className="mao-greeting">
+              <span>{greetingWord}{t("，")}</span>
               {isEditingName ? (
-                <span className="inline-flex items-center gap-1">
+                <span className="mao-greeting-edit">
                   <input
                     type="text"
                     autoFocus
                     maxLength={40}
                     value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveName();
-                      if (e.key === "Escape") setIsEditingName(false);
+                    onChange={(event) => setTempName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") handleSaveName();
+                      if (event.key === "Escape") setIsEditingName(false);
                     }}
                     placeholder={t("输入昵称 (如 jerry)")}
-                    className="px-2 py-0.5 text-base rounded bg-(--input-bg,rgba(0,0,0,0.3)) border border-(--accent) text-(--text-primary) focus:outline-none w-36"
+                    className="mao-greeting-input"
                   />
                   <button
                     type="button"
                     onClick={handleSaveName}
-                    className="p-1 rounded bg-(--accent) text-white font-medium hover:opacity-90 transition-opacity"
+                    className="mao-greeting-btn is-save"
                     title={t("保存")}
                   >
                     <Check size={14} />
@@ -408,7 +345,7 @@ function HomeClusterOverview({
                   <button
                     type="button"
                     onClick={() => setIsEditingName(false)}
-                    className="p-1 rounded bg-white/10 text-(--text-muted) hover:text-(--text-primary) transition-colors"
+                    className="mao-greeting-btn is-cancel"
                     title={t("取消")}
                   >
                     <X size={14} />
@@ -416,29 +353,39 @@ function HomeClusterOverview({
                 </span>
               ) : (
                 <span
-                  className={`inline-flex items-center gap-1.5 group ${loggedIn ? "cursor-pointer" : ""}`}
+                  className={`mao-greeting-name${loggedIn ? " is-editable" : ""}`}
                   onClick={loggedIn ? handleStartEdit : undefined}
                   title={loggedIn ? t("点击快速修改管理员昵称") : undefined}
                 >
                   <DiaTextReveal text={username || "Guest"} />
-                  {loggedIn && (
-                    <Pencil
-                      size={13}
-                      className="text-(--text-muted) opacity-0 group-hover:opacity-80 hover:text-(--accent) transition-all"
-                    />
-                  )}
+                  {loggedIn && <Pencil size={12} className="mao-greeting-pencil" />}
                 </span>
               )}
             </h2>
-            <p className="mao-section-sub">{greetingInfo.subtitle}</p>
+          </div>
+          <div className="mao-section-top-actions">
+            <ClusterStatusPill
+              totalNodes={overview.totalNodes}
+              onlineNodes={overview.onlineNodes}
+              offlineNodes={overview.offlineNodes}
+              offlineList={offlineNodeList}
+            />
+            {sortControl && (
+              <div className="mao-section-header-actions">{sortControl}</div>
+            )}
+          </div>
         </div>
-
+        <div
+          className="mao-section-head-grid"
+          style={{ "--split": `${splitRatio}%` } as CSSProperties}
+        >
+          <div className="mao-section-head-main">
         {/* 指标卡片（最多 6 张，可在设置里逐张关掉）：data-cards 是实际张数，放不下自动换行 */}
         {statCardCount > 0 && (
         <div className="mao-stat-grid is-inline" data-cards={statCardCount}>
           {/* 1. 活跃连接 (全站活跃连接数) */}
           {metricCards.connections && (
-          <div className="mao-stat-card" data-metric="connections">
+          <SpotlightCard className="mao-stat-card" data-metric="connections">
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="connections" icon={Network} />
@@ -448,18 +395,19 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {totalConnections.toLocaleString()} <span className="mao-stat-unit">Conn</span>
             </div>
+            <MetricSparkline value={totalConnections} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("TCP 连接: {tcp} · UDP 连接: {udp}", { tcp: overview.totalTcpConn.toLocaleString(), udp: overview.totalUdpConn.toLocaleString() })}>
                 TCP {overview.totalTcpConn.toLocaleString()} · UDP {overview.totalUdpConn.toLocaleString()}
               </span>
             </div>
-          </div>
+          </SpotlightCard>
 
           )}
 
           {/* 2. 平均 CPU */}
           {metricCards.cpu && (
-          <div className="mao-stat-card" data-metric="cpu">
+          <SpotlightCard className="mao-stat-card" data-metric="cpu">
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="cpu" icon={Cpu} />
@@ -469,18 +417,19 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {overview.avgCpu.toFixed(1)} <span className="mao-stat-unit">%</span>
             </div>
+            <MetricSparkline value={overview.avgCpu} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption">
                 {overview.onlineNodes > 0 ? t("{n} 台在线服务器", { n: overview.onlineNodes }) : t("暂无在线服务器")}
               </span>
             </div>
-          </div>
+          </SpotlightCard>
 
           )}
 
           {/* 3. 内存用量 */}
           {metricCards.ram && (
-          <div className="mao-stat-card" data-metric="ram">
+          <SpotlightCard className="mao-stat-card" data-metric="ram">
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="ram" icon={Layers} />
@@ -490,18 +439,19 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {ramUsedValue} <span className="mao-stat-unit">{ramUsedUnit}</span>
             </div>
+            <MetricSparkline value={overview.totalRamUsed} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("已用: {used} / 总量: {total}", { used: formatBytes(overview.totalRamUsed), total: formatBytes(overview.totalRamTotal) })}>
                 {t("共 {total}", { total: formatBytes(overview.totalRamTotal) })} · {overview.ramPct.toFixed(1)}%
               </span>
             </div>
-          </div>
+          </SpotlightCard>
 
           )}
 
           {/* 4. 硬盘用量 */}
           {metricCards.disk && (
-          <div className="mao-stat-card" data-metric="disk">
+          <SpotlightCard className="mao-stat-card" data-metric="disk">
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="disk" icon={HardDrive} />
@@ -511,18 +461,19 @@ function HomeClusterOverview({
             <div className="mao-stat-value">
               {diskUsedValue} <span className="mao-stat-unit">{diskUsedUnit}</span>
             </div>
+            <MetricSparkline value={overview.totalDiskUsed} />
             <div className="mao-stat-footer">
               <span className="mao-stat-caption" title={t("已用: {used} / 总量: {total}", { used: formatBytes(overview.totalDiskUsed), total: formatBytes(overview.totalDiskTotal) })}>
                 {t("共 {total}", { total: formatBytes(overview.totalDiskTotal) })} · {overview.diskPct.toFixed(1)}%
               </span>
             </div>
-          </div>
+          </SpotlightCard>
 
           )}
 
           {/* 5. 最近重启 (全网最近重启时长 & 节点名称) */}
           {metricCards.uptime && (
-          <div className="mao-stat-card" data-metric="uptime">
+          <SpotlightCard className="mao-stat-card" data-metric="uptime">
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="uptime" icon={Timer} />
@@ -553,13 +504,16 @@ function HomeClusterOverview({
                 {recentReboot ? recentReboot.name : t("暂无在线设备")}
               </span>
             </div>
-          </div>
+          </SpotlightCard>
 
           )}
 
           {/* 6. 资产总值 (右上角钱币图标集成临期提醒悬浮窗) */}
           {showAssetCard && (
-            <div className={`mao-stat-card${renewalPopoverOpen ? " is-popover-open" : ""}`} data-metric="asset">
+            <SpotlightCard
+              className={`mao-stat-card${renewalPopoverOpen ? " is-popover-open" : ""}`}
+              data-metric="asset"
+            >
               <div className="mao-stat-head">
                 <div className="mao-stat-title-wrap">
                   <StatMetricIcon metric="asset" icon={CircleDollarSign} />
@@ -591,35 +545,29 @@ function HomeClusterOverview({
                 </span>
                 {renderRating(assetRating)}
               </div>
-            </div>
+            </SpotlightCard>
           )}
         </div>
         )}
-      </div>
-      </div>
-      {/* 集群状态：并进服务器集群卡片，标题下方通栏 */}
-      <div
-        className="mao-progress-container is-wide"
-        data-palette={matrixColorTheme || "default"}
-      >
-          <div className="mao-progress-head">
-            <div className="mao-progress-title-wrap">
-              <h3 className="mao-progress-title">
-                <Activity size={17} className="text-(--text-primary)" />
-                <span>{t("集群状态")}</span>
-              </h3>
-              <p className="mao-progress-subtitle">
-                {clusterOverviewMode === "classic"
-                  ? t("服务器在线率与实时网络吞吐")
-                  : t("全节点实时负载与机架全景")}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+          </div>
 
-              <span className={`mao-status-pill ${isAllHealthy ? "is-healthy" : "is-warning"}`}>
-                <span className="mao-status-dot" />
-                {isAllHealthy ? t("状态健康") : overview.totalNodes === 0 ? t("未连接") : t("存在离线 ({n})", { n: overview.offlineNodes })}
-              </span>
+          {/* 左右分栏手柄：拖拽决定两侧卡片占用多少宽度 */}
+          {clusterOverviewMode === "classic" && (
+            <ColumnSplitHandle value={splitRatio} onChange={setSplitRatio} />
+          )}
+          {/* 右侧集群状态：以上下行图表为主，实时总带宽与在线率作次要读数 */}
+          {clusterOverviewMode === "classic" && (
+          <div
+            className="mao-progress-container is-charts"
+            data-palette={matrixColorTheme || "default"}
+          >
+            <div className="mao-progress-head">
+              <div className="mao-progress-title-wrap">
+                <h3 className="mao-progress-title">
+                  <Activity size={15} className="text-(--text-primary)" />
+                  <span>{t("集群状态")}</span>
+                </h3>
+              </div>
               {bandwidthRating && (
                 <span
                   className="overview-card-rating is-bandwidth-badge"
@@ -631,105 +579,83 @@ function HomeClusterOverview({
                 </span>
               )}
             </div>
-          </div>
 
-          {/* 根据集群状态展示设置，分别呈现「经典布局」或「独立全屏版面」 */}
-          <div className="mao-progress-body" data-mode={clusterOverviewMode}>
-          {clusterOverviewMode === "classic" ? (
-            <>
-              {/* 进度模块 1：服务器在线状态 */}
-              <div className="mao-progress-section">
-                <div className="mao-progress-section-header">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="mao-progress-big-num">{onlinePct.toFixed(0)}%</span>
-                    <span className="mao-progress-unit-label">{t("在线率")}</span>
-                  </div>
-                  <div className="mao-progress-tag-box">
-                    <span className="mao-progress-tag-label">{t("离线服务器")}</span>
-                    <span className="mao-progress-tag-val">{t("{n} 台", { n: overview.offlineNodes })}</span>
-                  </div>
-                </div>
-                {/* 节点展示：达到 51 台时切换为纯无缝一体化进度条，少于 51 台时呈现经典胶囊块 */}
-                {overview.totalNodes >= 51 ? (
-                  <div
-                    className="mao-seamless-progress"
-                    role="progressbar"
-                    aria-valuenow={Math.round(onlinePct)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    title={t("在线: {online} 台 ({pct}%) · 离线: {offline} 台", { online: overview.onlineNodes, pct: onlinePct.toFixed(1), offline: overview.offlineNodes })}
-                  >
-                    <div
-                      className="mao-seamless-segment is-online"
-                      style={{ width: `${onlinePct}%` }}
-                    />
-                    {overview.offlineNodes > 0 && (
-                      <div
-                        className="mao-seamless-segment is-offline"
-                        style={{
-                          width: `${(overview.offlineNodes / overview.totalNodes) * 100}%`,
-                        }}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="mao-node-blocks" role="presentation">
-                    {overview.totalNodes > 0 ? (
-                      Array.from({ length: overview.totalNodes }, (_, i) => {
-                        const isOnline = i < overview.onlineNodes;
-                        const isOffline = i >= overview.totalNodes - overview.offlineNodes;
-                        const statusClass = isOnline
-                          ? "is-online"
-                          : isOffline
-                            ? "is-offline"
-                            : "is-unknown";
-                        return (
-                          <span
-                            key={i}
-                            className={`mao-node-block ${statusClass}`}
-                            title={t("服务器 {n}: {status}", { n: i + 1, status: isOnline ? t("在线") : isOffline ? t("离线") : t("未知") })}
-                          />
-                        );
-                      })
-                    ) : (
-                      <span className="mao-node-block is-unknown" />
-                    )}
-                  </div>
-                )}
-                <div className="mao-progress-section-footer">
-                  <span>{t("在线 {n} 台", { n: overview.onlineNodes })}</span>
-                  <span>{t("总计 {n} 台", { n: overview.totalNodes })}</span>
-                </div>
-              </div>
-
-              {/* 进度模块 2：实时动态网络曲线图 */}
-              <OverviewTrafficChart
-                netUp={overview.netUp}
-                netDown={overview.netDown}
-              />
-            </>
-          ) : (
-            /* 矩阵布局：整屏呈现服务器机架方格热力矩阵 */
-            <div className="mao-cluster-body-wrap">
-              <div className="mao-cluster-pane">
-                <ClusterHeatmap
-                  nodes={visibleNodes}
-                  nameByUuid={nameByUuid}
-                  onlinePct={onlinePct}
-                  onlineNodes={overview.onlineNodes}
-                  offlineNodes={overview.offlineNodes}
-                  totalNodes={overview.totalNodes}
-                  colorTheme={matrixColorTheme}
-                  mockFill={matrixMockFill}
-                  bootAnimation={matrixBootAnimation}
-                  bootEffect={matrixBootEffect}
-                  customPattern={matrixCustomPattern}
-                />
-              </div>
+            <div className="mao-progress-body">
+              <OverviewTrafficChart netUp={overview.netUp} netDown={overview.netDown} />
             </div>
+
+            {/* 次要读数：在线率、节点状态条、实时总带宽 */}
+            <div className="mao-cluster-meta">
+              <span className="mao-cluster-meta-item">
+                <b>{onlinePct.toFixed(0)}%</b> {t("在线率")}
+              </span>
+              <div className="mao-node-blocks is-compact" role="presentation">
+                {overview.totalNodes > 0 ? (
+                  Array.from({ length: overview.totalNodes }, (_, i) => {
+                    const isOnline = i < overview.onlineNodes;
+                    const isOffline = i >= overview.totalNodes - overview.offlineNodes;
+                    const statusClass = isOnline
+                      ? "is-online"
+                      : isOffline
+                        ? "is-offline"
+                        : "is-unknown";
+                    return (
+                      <span
+                        key={i}
+                        className={`mao-node-block ${statusClass}`}
+                        title={t("服务器 {n}: {status}", { n: i + 1, status: isOnline ? t("在线") : isOffline ? t("离线") : t("未知") })}
+                      />
+                    );
+                  })
+                ) : (
+                  <span className="mao-node-block is-unknown" />
+                )}
+              </div>
+              <span className="mao-cluster-meta-item">
+                <b>{totalBandwidth.value}</b> {totalBandwidth.unit} {t("实时总带宽")}
+              </span>
+            </div>
+          </div>
           )}
         </div>
       </div>
+
+      {/* 矩阵模式：机架热力图仍整块铺开，1×3 的右栏塞不下 */}
+      {clusterOverviewMode !== "classic" && (
+      <div
+        className="mao-progress-container is-wide"
+        data-palette={matrixColorTheme || "default"}
+      >
+        <div className="mao-progress-head">
+          <div className="mao-progress-title-wrap">
+            <h3 className="mao-progress-title">
+              <Activity size={17} className="text-(--text-primary)" />
+              <span>{t("集群状态")}</span>
+            </h3>
+            <p className="mao-progress-subtitle">{t("全节点实时负载与机架全景")}</p>
+          </div>
+        </div>
+        <div className="mao-progress-body" data-mode={clusterOverviewMode}>
+          <div className="mao-cluster-body-wrap">
+            <div className="mao-cluster-pane">
+              <ClusterHeatmap
+                nodes={visibleNodes}
+                nameByUuid={nameByUuid}
+                onlinePct={onlinePct}
+                onlineNodes={overview.onlineNodes}
+                offlineNodes={overview.offlineNodes}
+                totalNodes={overview.totalNodes}
+                colorTheme={matrixColorTheme}
+                mockFill={matrixMockFill}
+                bootAnimation={matrixBootAnimation}
+                bootEffect={matrixBootEffect}
+                customPattern={matrixCustomPattern}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
     </>
   );
 }
@@ -1193,6 +1119,12 @@ export function NodeGrid() {
             overview={overview}
             sortControl={showHomeSort ? <HomeSortControl state={sort} /> : null}
             showDetailButton={showCostDetailButton}
+            username={
+              loggedIn
+                ? (themeSettings.adminNickname?.trim() || me?.username || "Admin")
+                : "Guest"
+            }
+            loggedIn={loggedIn}
             showAssetCard={showAssetCard}
             metricCards={overviewMetricCards}
             renewalReminderDays={
@@ -1206,12 +1138,6 @@ export function NodeGrid() {
             bandwidthRatingLabels={themeSettings.bandwidthRatingLabels}
             showAssetRating={themeSettings.showAssetRating}
             assetRatingLabels={themeSettings.assetRatingLabels}
-            username={
-              me?.logged_in
-                ? (themeSettings.adminNickname?.trim() || me?.username || "Admin")
-                : "Guest"
-            }
-            loggedIn={Boolean(me?.logged_in)}
             visibleNodes={visibleNodes}
             nameByUuid={nameByUuid}
             clusterOverviewMode={themeSettings.clusterOverviewMode}

@@ -8,32 +8,38 @@ import { memo } from "react";
 export const HomeSkeleton = memo(function HomeSkeleton() {
   return (
     <div className="home-skeleton-container space-y-6 animate-pulse" aria-hidden="true">
-      {/* 服务器集群卡片：标题区（问候语 + 指标卡）与集群状态 */}
+      {/* 服务器集群卡片：标题行（问候语 + 状态胶囊）与其下 3×2 指标卡、集群状态 */}
       <div className="rounded-2xl border border-(--border-subtle) bg-(--bg-card) p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="h-5 w-24 rounded-full bg-(--border-subtle) opacity-70" />
-          <div className="h-7 w-20 rounded-lg bg-(--bg-surface) opacity-60" />
-        </div>
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="h-5 w-40 max-w-full rounded-lg bg-(--border-subtle) opacity-75" />
-            <div className="h-4 w-56 max-w-full rounded bg-(--border-subtle) opacity-50" />
-          </div>
-          <div className="grid flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex h-16 flex-col justify-between rounded-xl border border-(--border-subtle) bg-(--bg-surface) p-2.5"
-              >
-                <div className="h-3 w-10 rounded bg-(--border-subtle) opacity-60" />
-                <div className="h-4 w-14 rounded bg-(--border-subtle) opacity-80" />
-              </div>
-            ))}
+          <div className="h-5 w-40 rounded bg-(--border-subtle) opacity-70" />
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-28 rounded-full bg-(--bg-surface) opacity-60" />
+            <div className="h-7 w-20 rounded-lg bg-(--bg-surface) opacity-60" />
           </div>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <div className="h-16 rounded-xl bg-(--bg-surface) opacity-60" />
-          <div className="h-16 rounded-xl bg-(--bg-surface) opacity-60 sm:col-span-2" />
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex min-h-[120px] flex-col justify-between rounded-xl border border-(--border-subtle) bg-(--bg-surface) p-2.5"
+                >
+                  <div className="h-3 w-10 rounded bg-(--border-subtle) opacity-60" />
+                  <div className="h-4 w-14 rounded bg-(--border-subtle) opacity-80" />
+                  <div className="h-2.5 w-12 rounded bg-(--border-subtle) opacity-50" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 rounded-xl border border-(--border-subtle) bg-(--bg-surface) p-3">
+            <div className="h-4 w-16 rounded bg-(--border-subtle) opacity-60" />
+            <div className="grid flex-1 grid-cols-2 gap-2">
+              <div className="min-h-24 rounded-lg bg-(--bg-card) opacity-60" />
+              <div className="min-h-24 rounded-lg bg-(--bg-card) opacity-60" />
+            </div>
+            <div className="h-3 w-40 rounded bg-(--border-subtle) opacity-50" />
+          </div>
         </div>
       </div>
 
