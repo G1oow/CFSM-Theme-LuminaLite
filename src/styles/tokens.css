@@ -37,6 +37,10 @@
   --data-field-bg: #f5f6f9;
   --data-field-border: rgba(24, 24, 27, 0.06);
   --data-field-highlight: rgba(255, 255, 255, 0.9);
+  /* 延迟 / 丢包柱的空位块（没有样本的格子）：深色下 9% 白在深底上读得出，浅色沿用
+     --progress-bg 的 #e4e4e7 再乘模型里的 0.55 透明度，落在白卡上几乎与背景同色 ——
+     这里单独给一档更深的灰，浅色也看得见「这一格没数据」。 */
+  --health-bar-empty: rgba(24, 24, 27, 0.4);
 
   --text-primary: #18181b;
   --text-secondary: #52525b;
@@ -187,6 +191,8 @@
   --card-field-bg: #121214;
   --card-divider: rgba(255, 255, 255, 0.08);
 
+  /* 空位块：与深色 --progress-bg 同档，乘模型透明度后仍是深底上的一层灰。 */
+  --health-bar-empty: rgba(255, 255, 255, 0.1);
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
   --text-tertiary: #71717a;
