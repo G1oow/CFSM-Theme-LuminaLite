@@ -2339,12 +2339,14 @@
 
 /* 换时间段、新数据还没回来：先接着显示上一档的图，压暗表示正在换（不缩成转圈，页面高度不变、不跳） */
 .instance-chart-grid,
+.instance-chart-panel .instance-ping-tasks-bar,
 .instance-chart-panel .instance-ping-tasks,
 .instance-chart-panel .instance-uplot-wrap {
   transition: opacity 160ms ease;
 }
 
 .instance-chart-panel.is-switching .instance-chart-grid,
+.instance-chart-panel.is-switching .instance-ping-tasks-bar,
 .instance-chart-panel.is-switching .instance-ping-tasks,
 .instance-chart-panel.is-switching .instance-uplot-wrap {
   opacity: 0.5;
@@ -2430,12 +2432,16 @@
   display: none;
 }
 
+/* 图表上方是高度手柄，间距由手柄自己给，这里只留 2px 让轴刻度不贴上握把 */
 .instance-uplot-wrap.is-large {
-  margin-top: 16px;
+  margin-top: 2px;
 }
 
-/* 折线入场：从左到右扫出，模拟逐渐画出（canvas 没法逐条 path 动画，用整体揭示近似） */
-.instance-uplot-wrap .uplot {
+/* 折线入场：从左到右扫出，模拟逐渐画出（canvas 没法逐条 path 动画，用整体揭示近似）。
+   负载小图保持每次画上都扫出；Ping 宽图只在首次出现时扫出 —— is-reveal 由组件挂上、动画结束时摘掉，
+   之后切丢包叠加、重选线路引起图表重建都不再重播，否则整块图会从空白再扫一遍，看着就是闪烁。 */
+.instance-uplot-wrap:not(.is-large) .uplot,
+.instance-uplot-wrap.is-reveal .uplot {
   animation: chart-reveal 0.7s ease-out;
 }
 
@@ -2449,7 +2455,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .instance-uplot-wrap .uplot {
+  .instance-uplot-wrap:not(.is-large) .uplot,
+  .instance-uplot-wrap.is-reveal .uplot {
     animation: none;
   }
 }
@@ -2501,27 +2508,130 @@
   border-radius: 999px;
 }
 
-.instance-ping-tasks {
+/* 探测节点：标题行（名称 + 计数）+ 排列切换 + 节点网格。
+   整块宽度可拖（右边那条竖手柄），胶囊跟着变宽 / 变窄；标题行和网格用同一份宽度，
+   排列切换才会贴在胶囊组右沿，而不是钉在面板最右边。节点本身是等宽表格行，
+   1 / 2 / 3 列由 data-layout 决定，窄屏一律退成一列。 */
+.instance-ping-probes-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: stretch;
+  gap: 6px;
 }
 
-.instance-ping-task {
+.instance-ping-probes {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  width: min(100%, 880px);
+  min-width: 0;
+  max-width: calc(100% - 16px);
+}
+
+.instance-ping-tasks-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.instance-ping-tasks-label {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-width: 0;
-  padding: 5px 11px;
-  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.instance-ping-tasks-count {
+  padding: 0 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-elev) 92%, transparent);
+  background: color-mix(in srgb, var(--text-tertiary) 14%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+.instance-ping-layout {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-elev) 86%, transparent);
+}
+
+.instance-ping-layout button {
+  min-width: 34px;
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 7px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.instance-ping-layout button:hover {
+  color: var(--text-primary);
+}
+
+.instance-ping-layout button[data-active="true"] {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.instance-ping-tasks {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.instance-ping-tasks[data-layout="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.instance-ping-tasks[data-layout="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* 一行一个节点：名称和读数之间留白多一些，读起来像列表而不是被拉宽的胶囊 */
+.instance-ping-tasks[data-layout="1"] .instance-ping-task-name {
+  max-width: 42%;
+}
+
+.instance-ping-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-elev) 76%, transparent);
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
   text-align: left;
-  white-space: nowrap;
   transition: opacity 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.instance-ping-task:hover {
+  background: var(--hover-bg);
+}
+
+/* 选中（只看这条 / 叠加显示）：边框和底色都带上这条线路的颜色，和折线一一对上 */
+.instance-ping-task[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ping-task-color, var(--border-strong)) 52%, transparent);
+  background: color-mix(in srgb, var(--ping-task-color, transparent) 9%, var(--surface-elev) 91%);
 }
 
 .instance-ping-task-dot {
@@ -2529,30 +2639,116 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: var(--ping-task-color, var(--text-tertiary));
 }
 
 .instance-ping-task-name {
   min-width: 0;
+  overflow: hidden;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 读数靠右排成一列：等宽数字 + 固定右对齐，几行节点的延迟 / 丢包才能上下对齐 */
+.instance-ping-task-values {
+  display: inline-flex;
+  margin-left: auto;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
 }
 
 .instance-ping-task-primary {
-  flex: 0 0 auto;
+  min-width: 3.6em;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  text-align: right;
 }
 
 .instance-ping-task-loss {
-  flex: 0 0 auto;
+  min-width: 2.9em;
   font-size: 11px;
   font-weight: 600;
+  text-align: right;
 }
 
 .instance-ping-task[data-visible="false"] {
   opacity: 0.4;
+}
+
+/* 尺寸手柄（探测节点宽度 / 图表高度）：平时只留一条极淡的握把，hover、拖拽、键盘聚焦时才显形。
+   和首页的分栏手柄同一套观感，不额外占一行高度。 */
+.instance-resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  touch-action: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.instance-resize-handle.is-x {
+  flex: 0 0 10px;
+  width: 10px;
+  cursor: col-resize;
+}
+
+.instance-resize-handle.is-y {
+  width: 100%;
+  height: 14px;
+  margin-top: 10px;
+  cursor: row-resize;
+}
+
+.instance-resize-grip {
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  transition: opacity 160ms ease, width 160ms ease, height 160ms ease;
+}
+
+.instance-resize-handle.is-x .instance-resize-grip {
+  width: 2px;
+  height: 26px;
+}
+
+.instance-resize-handle.is-y .instance-resize-grip {
+  width: 26px;
+  height: 2px;
+}
+
+.instance-resize-handle:hover,
+.instance-resize-handle.is-dragging {
+  color: var(--text-secondary);
+}
+
+/* 竖手柄（宽度）窄，铺一层底色当热区提示；横手柄（高度）横跨整行，铺满会像选中了一整行，
+   改成握把自己变长变亮。 */
+.instance-resize-handle.is-x:hover,
+.instance-resize-handle.is-x.is-dragging {
+  background: var(--hover-bg);
+}
+
+.instance-resize-handle:hover .instance-resize-grip,
+.instance-resize-handle.is-dragging .instance-resize-grip {
+  opacity: 1;
+}
+
+.instance-resize-handle.is-y:hover .instance-resize-grip,
+.instance-resize-handle.is-y.is-dragging .instance-resize-grip {
+  width: 64px;
+}
+/* 拖动中禁掉选中：不然鼠标划过文字会一把把选中 */
+body.is-resizing-chart {
+  user-select: none;
 }
 
 /* 丢包面积没有自己的悬停圆点：延迟线上已经有一个，底边再排一行点只会添乱 */
@@ -2649,7 +2845,7 @@
   }
 
   .instance-uplot-wrap.is-large {
-    margin-top: 12px;
+    margin-top: 2px;
   }
 
   .instance-chart-tooltip {
@@ -2657,8 +2853,18 @@
     max-width: 190px;
   }
 
-  .instance-ping-tasks {
+  /* 手机上一律一列：两列时节点名只剩二十几像素，名称被截成「CT…」还不如堆起来 */
+  .instance-ping-tasks[data-layout] {
     gap: 6px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .instance-ping-tasks[data-layout] .instance-ping-task-name {
+    max-width: none;
+  }
+
+  .instance-ping-tasks-bar {
+    gap: 8px;
   }
 
 }
