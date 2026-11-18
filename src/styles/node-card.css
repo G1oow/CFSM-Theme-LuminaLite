@@ -33,13 +33,6 @@
   contain-intrinsic-size: auto 438px;
 }
 
-/* 浅色：大卡边框给到 2px。白卡压在浅灰容器底上，1px 的卡边读不出边界，一串卡片排下来分不清谁是谁；
-   不用 1.5px 是因为 DPR=1 的屏上小数边框会被浏览器取整回 1px（实测 1.5px 仍算 1px）。
-   小卡 / 迷你卡保持 1px，不至于整页变重。 */
-:root:not([data-appearance="dark"]) .server-card {
-  border-width: 2px;
-}
-
 .server-card::before,
 .compact-node-card::before,
 .mini-node-card::before {
