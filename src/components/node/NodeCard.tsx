@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Link } from "react-router-dom";
 import {
@@ -404,7 +404,9 @@ const NodeTrafficQuota = memo(function NodeTrafficQuota({
     >
       <div className="traffic-quota-head">
         <span className="traffic-quota-label">
-          <Database size={13} strokeWidth={2} />
+          <span className="metric-icon">
+            <Database size={13} strokeWidth={2} />
+          </span>
           <span>{t("剩余流量")}</span>
           <strong className="traffic-quota-remain">{remainingLabel}</strong>
         </span>
@@ -490,7 +492,9 @@ const NodeHealthSection = memo(function NodeHealthSection({
       <div className="server-health-block">
         <div className="server-health-head">
           <div className="server-health-label">
-            <Clock3 size={13} strokeWidth={2} />
+            <span className="metric-icon" style={{ "--metric-tint": latencyColor } as CSSProperties}>
+              <Clock3 size={13} strokeWidth={2} />
+            </span>
             <span>{t("延迟")}</span>
           </div>
           <span
@@ -544,7 +548,9 @@ const NodeHealthSection = memo(function NodeHealthSection({
       <div className="server-health-block">
         <div className="server-health-head">
           <div className="server-health-label">
-            <Unplug size={13} strokeWidth={2} />
+            <span className="metric-icon" style={{ "--metric-tint": lossColor } as CSSProperties}>
+              <Unplug size={13} strokeWidth={2} />
+            </span>
             <span>{t("丢包率")}</span>
           </div>
           <span
@@ -798,7 +804,7 @@ function TrafficStat({
     <div className="traffic-stat">
       <div className="traffic-stat-head">
         <div className="traffic-stat-label">
-          <span style={{ color }}>{icon}</span>
+          <span className="metric-icon" style={{ color }}>{icon}</span>
           <span style={{ color: speedColor }}>{t(direction)}</span>
         </div>
         <span className="traffic-stat-value tabular" style={{ color: speedColor }}>
@@ -940,7 +946,9 @@ function FooterStat({
   return (
     <div className="server-card-meta">
       <div className="server-card-meta-label">
-        {icon}
+        <span className="metric-icon" style={{ "--metric-tint": color } as CSSProperties}>
+          {icon}
+        </span>
         <span>{label}</span>
       </div>
       <span className="server-card-meta-value tabular" style={{ color }}>
