@@ -2616,7 +2616,8 @@
   padding: 5px 9px;
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-elev) 76%, transparent);
+  /* 中性底：和面板同色系再压一档，浅色下不会泛出蓝灰的「脏」感 */
+  background: color-mix(in srgb, var(--surface-elev) 52%, var(--surface) 48%);
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
@@ -2628,10 +2629,12 @@
   background: var(--hover-bg);
 }
 
-/* 选中（只看这条 / 叠加显示）：边框和底色都带上这条线路的颜色，和折线一一对上 */
+/* 选中（只看这条 / 叠加显示）：整块胶囊不铺线路色 —— 浅色模式下彩色叠在灰底上会发浑，
+   尤其是黄 / 绿两条线。改成中性底 + 加深边框 + 左侧一条 3px 线路色竖条，一样能对上折线。 */
 .instance-ping-task[data-selected="true"] {
-  border-color: color-mix(in srgb, var(--ping-task-color, var(--border-strong)) 52%, transparent);
-  background: color-mix(in srgb, var(--ping-task-color, transparent) 9%, var(--surface-elev) 91%);
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface) 74%, var(--surface-elev) 26%);
+  box-shadow: inset 3px 0 0 var(--ping-task-color, var(--border-strong));
 }
 
 .instance-ping-task-dot {
