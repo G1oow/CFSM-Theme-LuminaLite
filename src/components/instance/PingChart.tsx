@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import UplotReact from "uplot-react";
 import type uPlot from "uplot";
 import { Eye, RefreshCw } from "lucide-react";
@@ -15,7 +22,7 @@ import {
   useResponsiveChartSize,
   type ChartTooltipState,
 } from "./chartShared";
-import { ChartTooltip, SwitchToggle } from "./ChartParts";
+import { ChartTooltip, ResizeHandle, SwitchToggle } from "./ChartParts";
 import {
   cutPeakValues,
   detectTypicalIntervalSeconds,
@@ -117,10 +124,86 @@ const CHART_PADDING_RIGHT = 14;
  * 和延迟折线在同一张图里。原来图上方还有一条按线路分行的丢包色带，有了叠加之后重复，已去掉。
  */
 const LOSS_AXIS_SIZE = 44;
-const LOSS_AREA_ALPHA = 0.3;
+// 丢包面积的透明度：0.3 时几条线路叠在一起会糊成一片，收到 0.22 后底下的网格线还看得见。
+const LOSS_AREA_ALPHA = 0.22;
 // 1 即关闭平滑(smoothByCount 对 <=1 原样返回);保留常量便于调参,非削峰模式当前不平滑。
 const SMOOTH_WINDOW_POINTS = 1;
 const SMOOTH_WINDOW_POINTS_PEAK = 13;
+
+/** 延迟探测节点的排列：每行固定 1 / 2 / 3 个。 */
+export type PingTaskLayout = "1" | "2" | "3";
+const PING_TASK_LAYOUTS: readonly PingTaskLayout[] = ["1", "2", "3"];
+const PING_TASK_LAYOUT_KEY = "cfsm-luminalite:ping-task-layout";
+
+export function normalizePingTaskLayout(value: unknown): PingTaskLayout {
+  return value === "1" || value === "2" ? value : "3";
+}
+
+/** 记住上次选的排列：本机偏好，重新进详情页不用再挑一次。 */
+function readPingTaskLayout(): PingTaskLayout {
+  try {
+    return normalizePingTaskLayout(window.localStorage.getItem(PING_TASK_LAYOUT_KEY));
+  } catch {
+    return "3";
+  }
+}
+
+function taskLayoutHint(layout: PingTaskLayout) {
+  return layout === "1"
+    ? t("每行 1 个探测节点")
+    : layout === "2"
+      ? t("每行 2 个探测节点")
+      : t("每行 3 个探测节点");
+}
+
+/**
+ * 探测节点条 / 图表的尺寸也能拖：宽度决定每个胶囊有多宽，高度决定图表画多高。
+ * 0 = 没调过，用自适应默认值（宽度 min(100%, 880px)，高度按视口）。
+ */
+const PING_PROBES_WIDTH_KEY = "cfsm-luminalite:ping-probes-width";
+const PING_CHART_HEIGHT_KEY = "cfsm-luminalite:ping-chart-height";
+const PROBES_WIDTH_DEFAULT = 880;
+const PROBES_WIDTH_MIN = 320;
+const PROBES_WIDTH_MAX = 1600;
+const CHART_HEIGHT_MIN = 200;
+const CHART_HEIGHT_MAX = 720;
+
+export function normalizePanelSize(value: unknown, min: number, max: number): number {
+  const size = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(size) && size >= min && size <= max ? Math.round(size) : 0;
+}
+
+function readPanelSize(key: string, min: number, max: number): number {
+  try {
+    return normalizePanelSize(window.localStorage.getItem(key), min, max);
+  } catch {
+    return 0;
+  }
+}
+
+function writePanelSize(key: string, value: number) {
+  try {
+    if (value > 0) window.localStorage.setItem(key, String(value));
+    else window.localStorage.removeItem(key);
+  } catch {
+    // 存不进去就只在本次会话里生效。
+  }
+}
+
+/**
+ * 纵轴范围。做成纯函数交给 uPlot 的 `range` 回调现算：换数据、切削峰时只需要 setData，
+ * 图表实例留着，不会整块重建（那是削峰平滑下闪烁的来源）。
+ */
+export function pingYAxisRange(max: number | null): [number, number] {
+  if (max == null || !Number.isFinite(max) || max <= 0) return [0, 100];
+  return [0, max + Math.max(5, max * 0.12)];
+}
+
+/** 右侧丢包轴：按当前显示的线路里最高的丢包率留一点头，最低也给到 5%。 */
+export function pingLossAxisRange(max: number | null): [number, number] {
+  const value = max != null && Number.isFinite(max) && max > 0 ? max : 0;
+  return [0, Math.min(100, Math.max(5, Math.ceil(value * 1.15)))];
+}
 
 export function PingChart({
   uuid,
@@ -148,7 +231,7 @@ export function PingChart({
   // 线路按钮上的延迟 / 丢包数字按主题设置里的「延迟光柱」「丢包光柱」门槛上色，和首页卡片同一套颜色。
   const { pingLatencyThresholds, pingLatencyColors, pingLossThresholds, pingLossColors } =
     useThemeSettings();
-  const { w, h, ref: chartSizeRef } = useResponsiveChartSize("wide");
+  const { w, h: responsiveHeight, ref: chartSizeRef } = useResponsiveChartSize("wide");
   /**
    * 选中的线路（和哪吒探针一个用法）：空 = 全部显示；点某条线路 = 只看它，再点别的线路是叠加上去，
    * 再点已选中的是去掉，全去掉又回到全部显示。「清除」一键回到全部。
@@ -156,6 +239,17 @@ export function PingChart({
   const [selectedTasks, setSelectedTasks] = useState<ReadonlySet<number>>(EMPTY_TASK_IDS);
   const [cutPeak, setCutPeak] = useState(false);
   const [showLossArea, setShowLossArea] = useState(true);
+  const [taskLayout, setTaskLayout] = useState<PingTaskLayout>(readPingTaskLayout);
+  // 探测节点条宽度 / 图表高度：0 = 用自适应默认值，拖过手柄才写死。
+  const [probesWidth, setProbesWidth] = useState(() =>
+    readPanelSize(PING_PROBES_WIDTH_KEY, PROBES_WIDTH_MIN, PROBES_WIDTH_MAX),
+  );
+  const [chartHeight, setChartHeight] = useState(() =>
+    readPanelSize(PING_CHART_HEIGHT_KEY, CHART_HEIGHT_MIN, CHART_HEIGHT_MAX),
+  );
+  const h = chartHeight || responsiveHeight;
+  // 入场扫出动画只放一次：图表重建（切丢包叠加、重新选线路）时再播一遍，整块图就会闪。
+  const [revealDone, setRevealDone] = useState(false);
   const chartRef = useRef<uPlot.AlignedData>([[]]);
   // tooltip 的 buildRows 只拿得到点位下标，丢包值走 ref 与图表数据同步。
   const lossRef = useRef<Array<Array<number | null>>>([]);
@@ -216,10 +310,6 @@ export function PingChart({
   const visibleTasks = useMemo(
     () => tasks.filter((task) => !hiddenTasks.has(task.id)),
     [hiddenTasks, tasks],
-  );
-  const visibleTaskIds = useMemo(
-    () => new Set(visibleTasks.map((task) => task.id)),
-    [visibleTasks],
   );
 
   useEffect(() => {
@@ -347,38 +437,19 @@ export function PingChart({
 
   const requestedXRange = useMemo(() => historyChartRangeSeconds(data), [data]);
   // 纵轴恒定从 0 起：截取中间一段会把 210ms 和 240ms 画成天差地别，看不出真实量级。
-  const yRange = useMemo<[number | null, number | null]>(() => {
-    if (!chart) return [null, null];
-    let max = Number.NEGATIVE_INFINITY;
-    for (let index = 0; index < tasks.length; index += 1) {
-      if (!visibleTaskIds.has(tasks[index].id)) continue;
-      const series = chart[index + 1] as Array<number | null | undefined> | undefined;
-      if (!series) continue;
-      for (const value of series) {
-        if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-          if (value > max) max = value;
-        }
-      }
-    }
-    if (max === Number.NEGATIVE_INFINITY || max <= 0) return [0, 100];
-    return [0, max + Math.max(5, max * 0.12)];
-  }, [chart, tasks, visibleTaskIds]);
+  // 具体范围不在这里算：options 一改 uplot-react 就销毁重建整个图表（削峰平滑下闪烁的根源），
+  // 交给 scales 里的 range 回调按当前显示中的线路现算（见 pingYAxisRange / pingLossAxisRange）。
+  const hasChart = chart != null;
 
-  // 右侧丢包轴：按当前显示的线路里最高的丢包率留一点头，最低也给到 5%，免得 0.3% 的小抖动顶满整张图。
-  const lossRange = useMemo<[number, number]>(() => {
-    let max = 0;
-    if (chartBundle) {
-      for (const task of visibleTasks) {
-        for (const value of chartBundle.loss[taskIndexById.get(task.id) ?? -1] ?? []) {
-          if (typeof value === "number" && value > max) max = value;
-        }
-      }
-    }
-    return [0, Math.min(100, Math.max(5, Math.ceil(max * 1.15)))];
-  }, [chartBundle, taskIndexById, visibleTasks]);
+  // 入场扫出只放一次：动画结束（或「减少动态效果」下根本没动画）就把标记收掉，重建图表不再重播。
+  useEffect(() => {
+    if (revealDone || !plotData) return;
+    const timer = window.setTimeout(() => setRevealDone(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [plotData, revealDone]);
 
   const baseOptions = useMemo<Omit<uPlot.Options, "width" | "height"> | null>(() => {
-    if (!chart) return null;
+    if (!hasChart) return null;
     const { grid, text } = getAxisColors(isDark);
     const tooltipHooks = buildChartTooltipHooks({
       dataRef: chartRef,
@@ -410,15 +481,18 @@ export function PingChart({
           })),
     });
     return {
-      padding: [10, CHART_PADDING_RIGHT, 12, CHART_PADDING_LEFT],
+      // 左右各留一点气口：左轴紧贴面板边会显得图表被挤扁，右侧给丢包百分比留出读数的空隙。
+      padding: [12, CHART_PADDING_RIGHT + 4, 12, CHART_PADDING_LEFT + 2],
       cursor: { drag: { x: true, y: false } },
       legend: { show: false },
       scales: {
         x: requestedXRange
           ? { time: true, auto: false, range: () => requestedXRange }
           : { time: true },
-        y: { auto: false, range: yRange },
-        loss: { auto: false, range: lossRange },
+        // 纵轴范围不随数据换 options（换一次 uplot-react 就重建一次图表，削峰平滑下会闪）：
+        // uPlot 在每次重绘时把「当前显示中的线路」的极值传进来，这里现算即可。
+        y: { range: (_self, _min, max) => pingYAxisRange(max) },
+        loss: { range: (_self, _min, max) => pingLossAxisRange(max) },
       },
       axes: [
         {
@@ -495,7 +569,7 @@ export function PingChart({
         setCursor: [tooltipHooks.onSetCursor],
       },
     };
-  }, [chart, hiddenTasks, hours, isDark, lossRange, requestedXRange, showLossArea, taskColors, taskIndexById, taskLabels, tasks, visibleTasks, yRange]);
+  }, [hasChart, hiddenTasks, hours, isDark, requestedXRange, showLossArea, taskColors, taskIndexById, taskLabels, tasks, visibleTasks]);
 
   const options = useMemo<uPlot.Options | null>(
     () => (baseOptions ? { ...baseOptions, width: w, height: h } : null),
@@ -573,6 +647,25 @@ export function PingChart({
   };
 
   const clearSelection = () => setSelectedTasks(EMPTY_TASK_IDS);
+
+  const changeTaskLayout = (next: PingTaskLayout) => {
+    setTaskLayout(next);
+    try {
+      window.localStorage.setItem(PING_TASK_LAYOUT_KEY, next);
+    } catch {
+      // 存不进去就只在本次会话里生效。
+    }
+  };
+
+  const updateProbesWidth = (next: number) => {
+    setProbesWidth(next);
+    writePanelSize(PING_PROBES_WIDTH_KEY, next);
+  };
+
+  const updateChartHeight = (next: number) => {
+    setChartHeight(next);
+    writePanelSize(PING_CHART_HEIGHT_KEY, next);
+  };
 
   if (isLoading) {
     return (
@@ -655,77 +748,141 @@ export function PingChart({
         </div>
       }
     >
-      <div className="instance-ping-tasks">
-        {taskStats.map((task) => {
-          const visible = !hiddenTasks.has(task.id);
-          return (
-            <button
-              key={task.id}
-              type="button"
-              className="instance-ping-task"
-              data-visible={visible ? "true" : "false"}
-              aria-pressed={selectedTasks.has(task.id)}
-              onClick={() => toggleTask(task.id)}
-              style={{ borderColor: visible ? task.color : "var(--border-subtle)" }}
-              title={[
-                taskLabels.get(task.id) ?? t("任务 #{id}", { id: task.id }),
-                t("当前 {latest} | 均值 {avg} | 丢包 {loss}%", {
-                  latest: task.latest != null ? `${task.latest.toFixed(1)} ms` : "—",
-                  avg: task.avg != null ? `${task.avg.toFixed(1)} ms` : "—",
-                  loss: task.loss.toFixed(1),
-                }),
-                t("p99 {p99} | 抖动 {jitter}", {
-                  p99: task.p99 != null ? `${task.p99.toFixed(0)} ms` : "—",
-                  jitter: task.volatility != null ? task.volatility.toFixed(2) : "—",
-                }),
-                t("min {min} | max {max} | 样本 {total} | 间隔 {interval}s", {
-                  min: task.min != null ? `${task.min.toFixed(0)} ms` : "—",
-                  max: task.max != null ? `${task.max.toFixed(0)} ms` : "—",
-                  total: task.total ?? 0,
-                  interval: task.interval,
-                }),
-                selectedTasks.size === 0
-                  ? t("点击只看这条线路，再点其他线路可叠加")
-                  : selectedTasks.has(task.id)
-                    ? t("点击取消选择")
-                    : t("点击叠加显示这条线路"),
-              ].join("\n")}
-            >
-              <span className="instance-ping-task-dot" style={{ background: task.color }} aria-hidden />
-              <span className="instance-ping-task-name">{taskLabels.get(task.id) ?? t("任务 #{id}", { id: task.id })}</span>
-              <span
-                className="instance-ping-task-primary"
-                style={{
-                  color:
-                    task.latest != null
-                      ? resolveCustomLatencyColor(task.latest, pingLatencyThresholds, pingLatencyColors)
-                      : "var(--text-tertiary)",
-                }}
-              >
-                {task.latest != null ? `${task.latest.toFixed(1)} ms` : "—"}
-              </span>
-              <span
-                className="instance-ping-task-loss"
-                style={{ color: resolveCustomLossColor(task.loss, pingLossThresholds, pingLossColors) }}
-              >
-                {task.loss.toFixed(1)}%
-              </span>
-            </button>
-          );
-        })}
+      {/* 节点条整块（标题 + 排列切换 + 胶囊网格）共用一个宽度：拖右侧手柄时胶囊变窄 / 变宽，
+          「延迟探测节点排列」跟着这条的右沿走，不会自己钉在面板最右边。 */}
+      <div className="instance-ping-probes-row">
+        <div
+          className="instance-ping-probes"
+          style={probesWidth > 0 ? { width: probesWidth } : undefined}
+        >
+          <div className="instance-ping-tasks-bar">
+            <span className="instance-ping-tasks-label">
+              {t("延迟探测节点")}
+              <span className="instance-ping-tasks-count">{taskStats.length}</span>
+            </span>
+            <div className="instance-ping-layout" role="group" aria-label={t("延迟探测节点排列")}>
+              {PING_TASK_LAYOUTS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  data-active={taskLayout === option ? "true" : "false"}
+                  aria-pressed={taskLayout === option}
+                  aria-label={`${option}×N ${taskLayoutHint(option)}`}
+                  onClick={() => changeTaskLayout(option)}
+                  title={taskLayoutHint(option)}
+                >
+                  {option}×N
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="instance-ping-tasks" data-layout={taskLayout}>
+            {taskStats.map((task) => {
+              const visible = !hiddenTasks.has(task.id);
+              const selected = selectedTasks.has(task.id);
+              return (
+                <button
+                  key={task.id}
+                  type="button"
+                  className="instance-ping-task"
+                  data-visible={visible ? "true" : "false"}
+                  data-selected={selected ? "true" : "false"}
+                  aria-pressed={selected}
+                  onClick={() => toggleTask(task.id)}
+                  style={{ "--ping-task-color": task.color } as CSSProperties}
+                  title={[
+                    taskLabels.get(task.id) ?? t("任务 #{id}", { id: task.id }),
+                    t("当前 {latest} | 均值 {avg} | 丢包 {loss}%", {
+                      latest: task.latest != null ? `${task.latest.toFixed(1)} ms` : "—",
+                      avg: task.avg != null ? `${task.avg.toFixed(1)} ms` : "—",
+                      loss: task.loss.toFixed(1),
+                    }),
+                    t("p99 {p99} | 抖动 {jitter}", {
+                      p99: task.p99 != null ? `${task.p99.toFixed(0)} ms` : "—",
+                      jitter: task.volatility != null ? task.volatility.toFixed(2) : "—",
+                    }),
+                    t("min {min} | max {max} | 样本 {total} | 间隔 {interval}s", {
+                      min: task.min != null ? `${task.min.toFixed(0)} ms` : "—",
+                      max: task.max != null ? `${task.max.toFixed(0)} ms` : "—",
+                      total: task.total ?? 0,
+                      interval: task.interval,
+                    }),
+                    selectedTasks.size === 0
+                      ? t("点击只看这条线路，再点其他线路可叠加")
+                      : selected
+                        ? t("点击取消选择")
+                        : t("点击叠加显示这条线路"),
+                  ].join("\n")}
+                >
+                  <span className="instance-ping-task-dot" aria-hidden />
+                  <span className="instance-ping-task-name">
+                    {taskLabels.get(task.id) ?? t("任务 #{id}", { id: task.id })}
+                  </span>
+                  <span className="instance-ping-task-values">
+                    <span
+                      className="instance-ping-task-primary"
+                      style={{
+                        color:
+                          task.latest != null
+                            ? resolveCustomLatencyColor(task.latest, pingLatencyThresholds, pingLatencyColors)
+                            : "var(--text-tertiary)",
+                      }}
+                    >
+                      {task.latest != null ? `${task.latest.toFixed(1)} ms` : "—"}
+                    </span>
+                    <span
+                      className="instance-ping-task-loss"
+                      style={{ color: resolveCustomLossColor(task.loss, pingLossThresholds, pingLossColors) }}
+                    >
+                      {task.loss.toFixed(1)}%
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <ResizeHandle
+          orientation="x"
+          value={probesWidth || PROBES_WIDTH_DEFAULT}
+          min={PROBES_WIDTH_MIN}
+          max={PROBES_WIDTH_MAX}
+          step={16}
+          resetValue={0}
+          onChange={updateProbesWidth}
+          label={t("调整延迟探测节点宽度")}
+        />
       </div>
 
-      {/* 最小高度 = 图表高度：换时间段 / 开关丢包叠加时图表会按新 key 整个重建，旧图先卸掉、新图要等
+      {/* 图表高度手柄挂在图表上方：往上拖画得更高、往下拖拉矮，单击回到自适应高度。 */}
+      <ResizeHandle
+        orientation="y"
+        invert
+        value={h}
+        min={CHART_HEIGHT_MIN}
+        max={CHART_HEIGHT_MAX}
+        step={16}
+        resetValue={0}
+        onChange={updateChartHeight}
+        label={t("调整 Ping 图表高度")}
+      />
+
+      {/* 最小高度 = 图表高度：换时间段 / 开关丢包叠加时图表会重建，旧图先卸掉、新图要等
           effect 才画上，中间有一帧这块是空的。不撑住的话整页瞬间矮几百像素，浏览器把滚动位置往上拽，
           看着就是「一点时间段按钮页面就跳回顶上」。 */}
-      <div ref={chartSizeRef} className="instance-uplot-wrap is-large" style={{ minHeight: h }}>
+      <div
+        ref={chartSizeRef}
+        className={`instance-uplot-wrap is-large${revealDone ? "" : " is-reveal"}`}
+        style={{ minHeight: h }}
+        onAnimationEnd={(event) => {
+          // 扫出动画播完就摘掉标记：之后图表重建不再重播，否则整块图会闪一下。
+          if (event.animationName === "chart-reveal") setRevealDone(true);
+        }}
+      >
         {plotData && options && visibleTasks.length > 0 ? (
           <>
-            <UplotReact
-              key={`${uuid}-${hours}-${cutPeak ? "smooth" : "raw"}-${showLossArea ? "loss" : "noloss"}`}
-              options={options}
-              data={plotData}
-            />
+            <UplotReact key={`${uuid}-${hours}`} options={options} data={plotData} />
             <ChartTooltip tooltip={tooltip} />
           </>
         ) : (
