@@ -2202,7 +2202,8 @@
   flex-direction: column;
   border: 1px solid var(--hairline);
   border-radius: 22px;
-  background: var(--card-field-bg);
+  /* 浅色：大卡片本体纯白；卡里的数据小块用淡灰 --card-field-bg。深色由下面的覆盖改回 #121214。 */
+  background: var(--surface);
   padding: clamp(16px, 2vw, 24px);
   margin-bottom: 8px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 20px 44px -28px rgba(16, 24, 40, 0.22);
