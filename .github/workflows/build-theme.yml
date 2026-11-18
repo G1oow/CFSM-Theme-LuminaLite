@@ -144,9 +144,25 @@ jobs:
             git -C "${workdir}" remote add origin "${remote}"
           fi
 
-          # 换成本次产物：删掉除 .git 外的所有旧文件，再整包拷入。
-          find "${workdir}" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          # 保留旧产物：旧 index.html / 旧主 chunk 可能还在浏览器或边缘缓存里（assets 带 max-age=3600），
+          # 它们引用的懒加载分块必须还在，否则动态导入 404、页面只剩一张「检测到新版本」卡片。
+          # 只保留最近 3 代（本次 + 前两代），避免产物分支无限膨胀 —— CFSM 拉主题包是整包下载。
+          keep_assets="${RUNNER_TEMP}/keep-assets.txt"
+          : > "${keep_assets}"
+          if git -C "${workdir}" rev-parse --verify HEAD >/dev/null 2>&1; then
+            git -C "${workdir}" log --diff-filter=A --name-only -3 HEAD -- assets \
+              | sed -n 's|^assets/||p' | sort -u > "${keep_assets}"
+          fi
+
           cp -R dist/. "${workdir}/"
+
+          if [ -s "${keep_assets}" ]; then
+            while IFS= read -r name; do
+              if [ -f "dist/assets/${name}" ]; then continue; fi
+              if grep -qxF "${name}" "${keep_assets}"; then continue; fi
+              rm -f "${workdir}/assets/${name}"
+            done < <(find "${workdir}/assets" -maxdepth 1 -type f -printf '%f\n')
+          fi
 
           cd "${workdir}"
           git config user.name "github-actions[bot]"

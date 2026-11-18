@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from "react";
+import { hardReload } from "@/utils/hardReload";
 
 const RELOAD_KEY = "cfsm_chunk_reload_ts";
 
@@ -31,7 +32,7 @@ export function safeLazy<T extends ComponentType<any>>(
         // 15 秒内最多自动刷新一次，避免网络真正断网时陷入死循环
         if (now - lastReload > 15_000) {
           sessionStorage.setItem(RELOAD_KEY, String(now));
-          window.location.reload();
+          hardReload();
           return new Promise<{ default: T }>(() => {});
         }
       }
