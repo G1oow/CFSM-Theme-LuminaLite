@@ -17,6 +17,26 @@
   --border-strong: rgba(24, 24, 27, 0.14);
   /* 卡片内分隔线：0.07 在纯白卡面上与背景几乎没有差值，浅色下分隔线等于消失 */
   --hairline: rgba(24, 24, 27, 0.11);
+  /* 卡片分层（浅色）：卡面、卡边、落影与数据底板。原来卡边和分隔线共用 --hairline，
+     白卡压在灰底上只剩一层几乎看不见的灰线，卡片之间、数据之间都糊成一片。 */
+  --card-border: rgba(24, 24, 27, 0.14);
+  --card-border-hover: rgba(24, 24, 27, 0.24);
+  --card-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.08),
+    0 2px 6px rgba(16, 24, 40, 0.05),
+    0 14px 28px -14px rgba(16, 24, 40, 0.22);
+  --card-shadow-hover:
+    0 2px 4px rgba(16, 24, 40, 0.1),
+    0 6px 14px -4px rgba(16, 24, 40, 0.08),
+    0 22px 40px -18px rgba(16, 24, 40, 0.3);
+  /* 卡片站的底色：比纯白卡面深一档，卡片才有“浮起来”的参照。 */
+  --card-field-bg: #e7e9ee;
+  /* 卡内分隔线：白卡上 0.11 的 hairline 读不出是条线，0.15 才成立。 */
+  --card-divider: rgba(24, 24, 27, 0.15);
+  /* 大卡数据区：浅灰底板 + 极淡描边 + 顶部内高光，让数据看起来坐在一块“数据框”里。 */
+  --data-field-bg: #f5f6f9;
+  --data-field-border: rgba(24, 24, 27, 0.06);
+  --data-field-highlight: rgba(255, 255, 255, 0.9);
 
   --text-primary: #18181b;
   --text-secondary: #52525b;
@@ -159,6 +179,13 @@
   --border-subtle: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.16);
   --hairline: rgba(255, 255, 255, 0.08);
+  /* 深色取值与改动前的卡面描边 / 落影完全一致：新增的卡片分层只在浅色里改变观感。 */
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-hover: rgba(255, 255, 255, 0.2);
+  --card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
+  --card-shadow-hover: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
+  --card-field-bg: #121214;
+  --card-divider: rgba(255, 255, 255, 0.08);
 
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;

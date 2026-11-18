@@ -7,11 +7,14 @@
   --node-card-bg: #ffffff;
   position: relative;
   background: var(--node-card-bg);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--card-border);
   border-radius: 14px;
   content-visibility: auto;
-  /* 浅色卡面给一层落影 + 一层接触影，卡片才从灰底上抬起来 */
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07), 0 8px 18px -6px rgba(16, 24, 40, 0.16);
+  /* 卡面落影：浅色由 --card-shadow 的三层影把白卡从深一档的容器底上抬起来 */
+  box-shadow: var(--card-shadow);
+  /* 「凸显」闪烁环由 home.css 的 mao-target-ring 驱动：环画在卡面落影之上，
+     动画期间也要保住这层落影，否则卡片会瞬间拍平、卡里的分隔线跟着一起糊掉。 */
+  --card-ring-shadow: var(--card-shadow);
   overflow: hidden;
   transition:
     border-color 180ms ease,
@@ -24,8 +27,6 @@
 :root[data-appearance="dark"] .compact-node-card,
 :root[data-appearance="dark"] .mini-node-card {
   --node-card-bg: #1c1c1f;
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.25);
 }
 
 .server-card {
@@ -41,9 +42,9 @@
 .server-card:hover,
 .compact-node-card:hover,
 .mini-node-card:hover {
-  border-color: rgba(0, 0, 0, 0.14);
+  border-color: var(--card-border-hover);
   --node-card-bg: #ffffff;
-  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 16px 32px -12px rgba(16, 24, 40, 0.26);
+  box-shadow: var(--card-shadow-hover);
   transform: translateY(-2px);
 }
 
@@ -51,8 +52,6 @@
 :root[data-appearance="dark"] .compact-node-card:hover,
 :root[data-appearance="dark"] .mini-node-card:hover {
   --node-card-bg: #27272a;
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
 }
 
 .server-card.is-offline,
@@ -214,6 +213,16 @@
   gap: 0;
 }
 
+/* 浅色：数据先收进一块浅灰「数据底板」（卡头 / 卡尾仍是白卡面），分区之间再用
+   --card-divider 的分隔线切开。白卡上一排排裸文字读不出结构，铺一层底板才有“数据框”。 */
+:root:not([data-appearance="dark"]) .server-card-stack {
+  padding: 10px 10px 12px;
+  border: 1px solid var(--data-field-border);
+  border-radius: 12px;
+  background: var(--data-field-bg);
+  box-shadow: inset 0 1px 0 var(--data-field-highlight);
+}
+
 .server-metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -262,11 +271,11 @@
   height: 8px;
 }
 
-/* 大卡分区使用一套连续节奏，避免每个数据块都变成小卡片。 */
+/* 分区之间用读得出来的分隔线（--card-divider）；分区本身仍不各自成小卡片，保持连续节奏。 */
 .server-card-stack > .card-metric-section + .card-metric-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--card-divider);
 }
 
 .server-traffic-section {
@@ -741,7 +750,7 @@
 
 .server-card-footer {
   padding-top: 12px;
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--card-divider);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -857,4 +866,18 @@
 .compact-node-card:not(.is-offline) .node-card-head:hover:not(:has([data-detail-click="off"]:hover)) .compact-node-title,
 .mini-node-card:not(.is-offline) .node-card-head:hover:not(:has([data-detail-click="off"]:hover)) .mini-node-title {
   color: var(--progress-cpu);
+}
+
+/* ---------- 浅色模式：图标换自己的指标色 ---------- */
+
+/* 图标只换成自己的指标色（原来一律灰），不加底片、不加描边。
+   --metric-tint 由组件给出该指标的颜色（CPU 蓝 / 内存紫 / 磁盘橙 / 负载粉 / 上下行方向色…），
+   组件自己写了内联 color 时以它为准。深色卡面够暗，图标保持原来的裸线稿与灰度。 */
+:root:not([data-appearance="dark"]) .metric-icon {
+  color: var(--metric-tint, currentColor);
+}
+
+/* 剩余流量的「剩余」跟在分区标题后面，底板里换行会把它甩到下一行，让图标自己居中。 */
+:root:not([data-appearance="dark"]) .traffic-quota-label > .metric-icon {
+  align-self: center;
 }

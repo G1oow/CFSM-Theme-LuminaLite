@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from "react";
+import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { CanvasStrip, barCornerRadius, fillRoundedRect, safeCanvasColor } from "./CanvasStrip";
 import { getBarGeometry, snapBarRect } from "./nodeCardShared";
 
@@ -68,7 +68,9 @@ export function MetricBar({
     <div className="metric-item">
       <div className="flex justify-between items-center gap-3 min-w-0">
         <div className="flex items-center gap-1.5 text-(--text-secondary) flex-shrink-0">
-          <span>{icon}</span>
+          <span className="metric-icon" style={{ "--metric-tint": paint } as CSSProperties}>
+            {icon}
+          </span>
           <span className="text-[11px] font-medium tracking-[0.02em]">{label}</span>
         </div>
         <div className="tabular text-[13px] text-(--text-primary) whitespace-nowrap overflow-hidden text-ellipsis max-w-full text-right">

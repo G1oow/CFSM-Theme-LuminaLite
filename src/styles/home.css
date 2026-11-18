@@ -363,13 +363,13 @@
   flex-direction: column;
   justify-content: space-between;
   border-radius: 14px;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--card-border);
   background: #ffffff;
   padding: 13px 15px;
   min-height: 96px;
   height: 100%;
-  /* 浅色卡面原先只有 2% 阴影，贴在灰底上等于没抬起；这里给一层落影 + 一层接触影 */
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07), 0 8px 18px -6px rgba(16, 24, 40, 0.16);
+  /* 与节点卡同一套卡面落影（--card-shadow），指标卡和服务器卡才像同一层的卡 */
+  box-shadow: var(--card-shadow);
   /* 只过渡真正会变的属性；配 translateZ(0) 让整卡提前成层，避免悬停时重新栅格化图标 */
   transform: translateZ(0);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease,
@@ -383,8 +383,8 @@
 }
 
 .mao-stat-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.09), 0 14px 28px -10px rgba(16, 24, 40, 0.24);
+  border-color: var(--card-border-hover);
+  box-shadow: var(--card-shadow-hover);
   transform: translate3d(0, -1px, 0);
 }
 
@@ -1951,13 +1951,22 @@
   animation: mao-target-ring 2s ease-out;
 }
 
+/* 「凸显」环：0% 叠亮环 → 100% 只留卡面自己的落影（--card-ring-shadow 由卡片给出，
+   列表行没有落影，退化成 0）。原来 100% 直接收到 box-shadow: none，闪烁那两秒卡片被拍平，
+   卡内的分隔线和数据底板一起失去层次。 */
 @keyframes mao-target-ring {
   0% {
-    box-shadow: 0 0 0 3px var(--theme-accent, #3b82f6), 0 0 16px rgba(59, 130, 246, 0.45);
+    box-shadow:
+      0 0 0 3px var(--theme-accent, #3b82f6),
+      0 0 16px rgba(59, 130, 246, 0.45),
+      var(--card-ring-shadow, 0 0 0 0 transparent);
   }
 
   100% {
-    box-shadow: none;
+    box-shadow:
+      0 0 0 0 transparent,
+      0 0 0 0 transparent,
+      var(--card-ring-shadow, 0 0 0 0 transparent);
   }
 }
 
@@ -2193,7 +2202,7 @@
   flex-direction: column;
   border: 1px solid var(--hairline);
   border-radius: 22px;
-  background: var(--surface-elev, #eaecf0);
+  background: var(--card-field-bg);
   padding: clamp(16px, 2vw, 24px);
   margin-bottom: 8px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 20px 44px -28px rgba(16, 24, 40, 0.22);
