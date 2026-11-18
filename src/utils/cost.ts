@@ -60,7 +60,7 @@ const CURRENCY_ALIASES: Record<string, string> = {
   "加元": "CAD",
 };
 
-interface CostSummary {
+export interface CostSummary {
   totalCny: number;
   monthlyCny: number;
   remainingCny: number;
@@ -78,7 +78,7 @@ interface CostSummary {
   details: CostSummaryDetail[];
 }
 
-interface CostSummaryDetail {
+export interface CostSummaryDetail {
   uuid: string;
   name: string;
   region: string;

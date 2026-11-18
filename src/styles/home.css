@@ -4459,3 +4459,502 @@ body.is-resizing-columns {
     animation: none !important;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * 指标放大视图：点左栏任一指标卡弹出
+ * 上面是读数趋势（会变的四项指标），下面是逐节点明细排行。
+ * ------------------------------------------------------------------ */
+
+/* 卡面上的放大提示：平时不显形，悬停 / 键盘聚焦时才出来，不抢读数的视觉重心 */
+.mao-stat-expand {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+
+.mao-stat-card:hover .mao-stat-expand,
+.mao-stat-card:focus-visible .mao-stat-expand,
+.mao-stat-card:focus-within .mao-stat-expand {
+  opacity: 0.9;
+}
+
+/* 整卡可点（role="button" 的五张卡）：指针与键盘焦点都要看得出是可点的 */
+.mao-stat-card[role="button"] {
+  cursor: pointer;
+}
+
+.mao-stat-card[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+/* 资产卡头部：放大按钮与资产页入口并排，别让 space-between 把它们摊到两头 */
+.mao-stat-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mao-stat-expand.is-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.mao-stat-expand.is-button:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.mao-metric-detail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 17, 21, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: mao-detail-fade 150ms ease;
+}
+
+.mao-metric-detail {
+  /* 每个指标一套色：曲线、条柱、主读数共用，口径与卡面主读数一致 */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(720px, 100%);
+  max-height: min(88vh, 780px);
+  overflow-y: auto;
+  padding: 18px 20px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: #ffffff;
+  box-shadow: 0 30px 72px -22px rgba(15, 23, 42, 0.42), var(--card-shadow);
+  outline: none;
+  animation: mao-detail-rise 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-appearance="dark"] .mao-metric-detail {
+  background: #1c1c1f;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 32px 80px -22px rgba(0, 0, 0, 0.7);
+}
+
+.mao-metric-detail[data-metric="connections"] {
+  --detail-line: var(--tag-teal-fg);
+  --detail-value: var(--tag-teal-fg);
+}
+
+.mao-metric-detail[data-metric="cpu"] {
+  --detail-line: var(--progress-cpu);
+  --detail-value: color-mix(in srgb, var(--progress-cpu) 80%, var(--text-primary));
+}
+
+.mao-metric-detail[data-metric="ram"] {
+  --detail-line: var(--progress-memory);
+  --detail-value: color-mix(in srgb, var(--progress-memory) 78%, var(--text-primary));
+}
+
+.mao-metric-detail[data-metric="disk"] {
+  --detail-line: var(--progress-disk);
+  --detail-value: color-mix(in srgb, var(--progress-disk) 72%, var(--text-primary));
+}
+
+.mao-metric-detail[data-metric="uptime"] {
+  --detail-line: color-mix(in srgb, var(--tag-grass-fg) 55%, var(--text-secondary));
+  --detail-value: color-mix(in srgb, var(--tag-grass-fg) 55%, var(--text-secondary));
+}
+
+.mao-metric-detail[data-metric="asset"] {
+  --detail-line: var(--accent-strong);
+  --detail-value: var(--accent-strong);
+}
+
+/* 深色模式回到各指标的原始语义色（浅色模式压深是为了白底上读得清） */
+:root[data-appearance="dark"] .mao-metric-detail[data-metric="cpu"] {
+  --detail-value: var(--progress-cpu);
+}
+
+:root[data-appearance="dark"] .mao-metric-detail[data-metric="ram"] {
+  --detail-value: var(--progress-memory);
+}
+
+:root[data-appearance="dark"] .mao-metric-detail[data-metric="disk"] {
+  --detail-value: var(--progress-disk);
+}
+
+.mao-metric-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mao-metric-detail-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mao-metric-detail-title-wrap h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.mao-metric-detail-sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+.mao-metric-detail-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.mao-metric-detail-close:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.mao-metric-detail-close:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.mao-metric-detail-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mao-metric-detail-value {
+  font-size: 30px;
+  font-weight: 780;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--detail-value, var(--text-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.mao-metric-detail-unit {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.mao-metric-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.mao-metric-detail-stat {
+  min-width: 78px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--data-field-border);
+  background: var(--card-field-bg);
+}
+
+.mao-metric-detail-stat dt {
+  margin: 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.mao-metric-detail-stat dd {
+  margin: 1px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mao-metric-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mao-metric-detail-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mao-metric-detail-section-head h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.mao-metric-detail-section-head span {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+/* 趋势图：与卡片里的迷你曲线同一套面积坐标，只是换成带刻度的整幅 */
+.mao-detail-chart {
+  position: relative;
+  width: 100%;
+  padding: 6px 4px 2px;
+  border-radius: 10px;
+  border: 1px solid var(--data-field-border);
+  background: var(--card-field-bg);
+  --detail-chart-fill-top: color-mix(in srgb, var(--detail-line, var(--accent-strong)) 24%, transparent);
+  --detail-chart-fill-bottom: color-mix(in srgb, var(--detail-line, var(--accent-strong)) 2%, transparent);
+}
+
+.mao-detail-chart-svg {
+  display: block;
+}
+
+.mao-detail-chart-line {
+  stroke: var(--detail-line, var(--accent-strong));
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.mao-detail-chart-grid {
+  stroke: var(--card-divider);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.mao-detail-chart-tick {
+  fill: var(--text-tertiary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mao-detail-chart-cursor {
+  stroke: color-mix(in srgb, var(--detail-line, var(--accent-strong)) 50%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.mao-detail-chart-dot {
+  fill: var(--detail-line, var(--accent-strong));
+  stroke: #ffffff;
+  stroke-width: 1.4;
+}
+
+:root[data-appearance="dark"] .mao-detail-chart-dot {
+  stroke: #1c1c1f;
+}
+
+.mao-detail-chart-tip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.22);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+:root[data-appearance="dark"] .mao-detail-chart-tip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(24, 24, 27, 0.95);
+}
+
+.mao-detail-chart-tip b {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mao-detail-chart-tip b em {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.mao-detail-chart-tip span {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.mao-detail-chart.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 132px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* 逐节点明细：名字 | 条柱 | 读数，滚动区限高，首屏不必滚整页 */
+.mao-metric-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 216px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mao-metric-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(56px, 2fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 7px;
+}
+
+.mao-metric-detail-row:hover {
+  background: var(--hover-bg);
+}
+
+.mao-metric-detail-row-name {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mao-metric-detail-row-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--progress-bg);
+  overflow: hidden;
+}
+
+.mao-metric-detail-row-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--detail-line, var(--accent-strong));
+}
+
+.mao-metric-detail-row-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mao-metric-detail-row-value em {
+  margin-left: 3px;
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.mao-metric-detail-empty {
+  margin: 0;
+  padding: 14px 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.mao-metric-detail-foot {
+  padding-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+@keyframes mao-detail-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mao-detail-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .mao-metric-detail-layer {
+    padding: 12px;
+  }
+
+  .mao-metric-detail {
+    gap: 12px;
+    padding: 14px 14px 12px;
+    border-radius: 16px;
+  }
+
+  .mao-metric-detail-value {
+    font-size: 26px;
+  }
+
+  .mao-metric-detail-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* 窄屏条柱退到名字下面一行，读数仍然贴右 */
+  .mao-metric-detail-row-bar {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mao-metric-detail-layer,
+  .mao-metric-detail {
+    animation: none;
+  }
+}
