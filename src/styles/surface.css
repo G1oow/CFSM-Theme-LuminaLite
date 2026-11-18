@@ -1995,7 +1995,8 @@
   min-width: 0;
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-elev) 92%, transparent);
+  /* 中性说明块底：原来用 --surface-elev 92%，浅色下是偏蓝的冷灰，混在白卡上发脏 */
+  background: var(--field-bg);
   padding: 9px 12px;
 }
 
