@@ -122,16 +122,6 @@
 :root[data-appearance="dark"] .mao-top-nav-bar::after {
   background: rgba(255, 255, 255, 0.08);
 }
-/* 浅色：顶栏底线加粗到 2px —— 1px / 6% 黑在白底上几乎看不出是条线，和内容之间没有分界 */
-:root:not([data-appearance="dark"]) .mao-top-nav-bar {
-  border-bottom-width: 2px;
-}
-
-:root:not([data-appearance="dark"]) .mao-top-nav-bar::after {
-  bottom: -2px;
-  height: 2px;
-  background: rgba(0, 0, 0, 0.12);
-}
 
 .mao-nav-title {
   font-size: 15px;
@@ -2220,12 +2210,6 @@
   position: relative;
   z-index: 1;
   gap: 16px;
-}
-
-/* 浅色：集群大卡的分界线也加粗一档 —— 1px / 11% 落在白卡边上太淡，和页面的浅灰底分不开 */
-:root:not([data-appearance="dark"]) .mao-cluster-card {
-  border-width: 2px;
-  border-color: rgba(24, 24, 27, 0.16);
 }
 
 :root[data-appearance="dark"] .mao-cluster-card {
