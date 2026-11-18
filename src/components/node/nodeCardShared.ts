@@ -268,7 +268,7 @@ export function healthBarSlotModel(
     return {
       active: false,
       heightFraction: HEALTH_INACTIVE_BAR_HEIGHT,
-      color: "var(--progress-bg)",
+      color: "var(--health-bar-empty)",
       alpha: 0.55,
     };
   }
@@ -284,7 +284,7 @@ export function healthBarSlotModel(
   return {
     active: false,
     heightFraction: HEALTH_LOSS_BAR_HEIGHT,
-    color: "var(--progress-bg)",
+    color: "var(--health-bar-empty)",
     alpha: 0.42,
   };
 }

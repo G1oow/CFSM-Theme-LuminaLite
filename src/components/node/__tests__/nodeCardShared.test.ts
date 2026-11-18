@@ -41,10 +41,21 @@ describe("healthBarSlotModel", () => {
   });
 
   it("renders missing latency as a short neutral gap", () => {
+    // 空位块用专用 token：浅色的 --progress-bg 乘模型透明度后与白卡几乎同色，必须换深一档的灰。
     expect(healthBarSlotModel(bucket(null, null), "latency")).toMatchObject({
       active: false,
       heightFraction: 0.25,
-      color: "var(--progress-bg)",
+      color: "var(--health-bar-empty)",
+      alpha: 0.55,
+    });
+  });
+
+  it("renders missing loss as a full-height neutral gap", () => {
+    expect(healthBarSlotModel(bucket(null, null), "loss")).toMatchObject({
+      active: false,
+      heightFraction: 0.84,
+      color: "var(--health-bar-empty)",
+      alpha: 0.42,
     });
   });
 
