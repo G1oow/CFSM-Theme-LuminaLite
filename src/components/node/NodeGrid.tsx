@@ -1,4 +1,15 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -8,6 +19,7 @@ import {
   Cpu,
   HardDrive,
   Layers,
+  Maximize2,
   Network,
   Pencil,
   Timer,
@@ -69,6 +81,11 @@ import { DiaTextReveal } from "@/components/ui/DiaTextReveal";
 import { t, useLang } from "@/i18n";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { MetricSparkline } from "./MetricSparkline";
+import { MetricDetailDialog } from "./MetricDetailDialog";
+import { buildMetricDetailView } from "./metricDetailView";
+import { useMetricTrends } from "@/hooks/useMetricTrends";
+import type { MetricDetailKey } from "@/utils/metricDetail";
+import type { CostSummary } from "@/utils/cost";
 
 // 卡片视图网格密度；列表档由独立组件布局。
 const GRID_LAYOUT: Record<NodeViewMode, { className: string; minColumnWidth: number }> = {
@@ -185,7 +202,7 @@ function HomeClusterOverview({
   matrixCustomPattern = null,
 }: {
   overview: HomeOverview;
-  costSummary: { remainingCny: number; totalOriginalPriceCny?: number } | null;
+  costSummary: CostSummary | null;
   costLoading: boolean;
   sortControl: ReactNode;
   showOverviewRatings: boolean;
@@ -213,6 +230,8 @@ function HomeClusterOverview({
   const queryClient = useQueryClient();
   const [renewalPopoverOpen, setRenewalPopoverOpen] = useState(false);
   const [splitRatio, setSplitRatio] = useColumnSplitRatio();
+  /** 放大视图当前打开的指标（null 表示没开）。 */
+  const [detailMetric, setDetailMetric] = useState<MetricDetailKey | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
   const greetingWord = getGreetingWord();
@@ -307,6 +326,59 @@ function HomeClusterOverview({
   const renewalCount = renewalReminders.length;
   const totalBandwidth = formatByteRate(overview.netUp + overview.netDown);
 
+  // 运行时长只在「最近重启」放大视图里排行为用；摘要里没有这项，从实时快照取。
+  const uptimeByUuid = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const node of visibleNodes) {
+      const metrics = getNodeMetricsSnapshot(node.uuid);
+      if (metrics?.online === true && Number.isFinite(metrics.uptime) && metrics.uptime > 0) {
+        map.set(node.uuid, metrics.uptime);
+      }
+    }
+    return map;
+  }, [visibleNodes]);
+
+  // 集群读数的实时缓冲：放大图的曲线来自这里，不额外查历史接口。
+  const trendSamples = useMetricTrends({
+    connections: totalConnections,
+    cpu: overview.avgCpu,
+    ram: overview.totalRamUsed,
+    disk: overview.totalDiskUsed,
+  });
+
+  const detailView = useMemo(
+    () =>
+      detailMetric
+        ? buildMetricDetailView({
+          metric: detailMetric,
+          overview,
+          nodes: visibleNodes,
+          nameOf: (uuid) => nameByUuid.get(uuid) ?? uuid,
+          uptimeByUuid,
+          assetDetails: costSummary?.details ?? null,
+          assetSummary: costSummary,
+          isPriceVisible,
+          samples: trendSamples,
+        })
+        : null,
+    [costSummary, detailMetric, isPriceVisible, nameByUuid, overview, trendSamples, uptimeByUuid, visibleNodes],
+  );
+
+  const closeDetail = useCallback(() => setDetailMetric(null), []);
+
+  // 整卡可点：卡内自带链接 / 按钮的（资产卡的资产页入口）交给它们自己处理，别在这里抢。
+  const detailCardProps = (key: MetricDetailKey) => ({
+    onClick: (event: MouseEvent<HTMLDivElement>) => {
+      if ((event.target as Element | null)?.closest("a, button")) return;
+      setDetailMetric(key);
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      setDetailMetric(key);
+    },
+  });
+
   return (
     <>
       {/* 服务器集群：标题行放徽章、状态胶囊与排序；下面左侧 3×2 指标卡，右侧 1×3 集群状态 */}
@@ -385,12 +457,20 @@ function HomeClusterOverview({
         <div className="mao-stat-grid is-inline" data-cards={statCardCount}>
           {/* 1. 活跃连接 (全站活跃连接数) */}
           {metricCards.connections && (
-          <SpotlightCard className="mao-stat-card" data-metric="connections">
+          <SpotlightCard
+            className="mao-stat-card"
+            data-metric="connections"
+            role="button"
+            tabIndex={0}
+            aria-label={t("放大查看活跃连接详情")}
+            {...detailCardProps("connections")}
+          >
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="connections" icon={Network} />
                 <span className="mao-stat-label">{t("活跃连接")}</span>
               </div>
+              <Maximize2 size={12} className="mao-stat-expand" aria-hidden="true" />
             </div>
             <div className="mao-stat-value">
               {totalConnections.toLocaleString()} <span className="mao-stat-unit">Conn</span>
@@ -407,12 +487,20 @@ function HomeClusterOverview({
 
           {/* 2. 平均 CPU */}
           {metricCards.cpu && (
-          <SpotlightCard className="mao-stat-card" data-metric="cpu">
+          <SpotlightCard
+            className="mao-stat-card"
+            data-metric="cpu"
+            role="button"
+            tabIndex={0}
+            aria-label={t("放大查看平均 CPU 详情")}
+            {...detailCardProps("cpu")}
+          >
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="cpu" icon={Cpu} />
                 <span className="mao-stat-label">{t("平均 CPU")}</span>
               </div>
+              <Maximize2 size={12} className="mao-stat-expand" aria-hidden="true" />
             </div>
             <div className="mao-stat-value">
               {overview.avgCpu.toFixed(1)} <span className="mao-stat-unit">%</span>
@@ -429,12 +517,20 @@ function HomeClusterOverview({
 
           {/* 3. 内存用量 */}
           {metricCards.ram && (
-          <SpotlightCard className="mao-stat-card" data-metric="ram">
+          <SpotlightCard
+            className="mao-stat-card"
+            data-metric="ram"
+            role="button"
+            tabIndex={0}
+            aria-label={t("放大查看内存用量详情")}
+            {...detailCardProps("ram")}
+          >
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="ram" icon={Layers} />
                 <span className="mao-stat-label">{t("内存用量")}</span>
               </div>
+              <Maximize2 size={12} className="mao-stat-expand" aria-hidden="true" />
             </div>
             <div className="mao-stat-value">
               {ramUsedValue} <span className="mao-stat-unit">{ramUsedUnit}</span>
@@ -451,12 +547,20 @@ function HomeClusterOverview({
 
           {/* 4. 硬盘用量 */}
           {metricCards.disk && (
-          <SpotlightCard className="mao-stat-card" data-metric="disk">
+          <SpotlightCard
+            className="mao-stat-card"
+            data-metric="disk"
+            role="button"
+            tabIndex={0}
+            aria-label={t("放大查看硬盘用量详情")}
+            {...detailCardProps("disk")}
+          >
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="disk" icon={HardDrive} />
                 <span className="mao-stat-label">{t("硬盘用量")}</span>
               </div>
+              <Maximize2 size={12} className="mao-stat-expand" aria-hidden="true" />
             </div>
             <div className="mao-stat-value">
               {diskUsedValue} <span className="mao-stat-unit">{diskUsedUnit}</span>
@@ -473,12 +577,20 @@ function HomeClusterOverview({
 
           {/* 5. 最近重启 (全网最近重启时长 & 节点名称) */}
           {metricCards.uptime && (
-          <SpotlightCard className="mao-stat-card" data-metric="uptime">
+          <SpotlightCard
+            className="mao-stat-card"
+            data-metric="uptime"
+            role="button"
+            tabIndex={0}
+            aria-label={t("放大查看最近重启详情")}
+            {...detailCardProps("uptime")}
+          >
             <div className="mao-stat-head">
               <div className="mao-stat-title-wrap">
                 <StatMetricIcon metric="uptime" icon={Timer} />
                 <span className="mao-stat-label">{t("最近重启")}</span>
               </div>
+              <Maximize2 size={12} className="mao-stat-expand" aria-hidden="true" />
             </div>
             <div className="mao-stat-value">
               {recentReboot ? (
@@ -513,13 +625,24 @@ function HomeClusterOverview({
             <SpotlightCard
               className={`mao-stat-card${renewalPopoverOpen ? " is-popover-open" : ""}`}
               data-metric="asset"
+              {...detailCardProps("asset")}
             >
               <div className="mao-stat-head">
                 <div className="mao-stat-title-wrap">
                   <StatMetricIcon metric="asset" icon={CircleDollarSign} />
                   <span className="mao-stat-label">{t("资产总值")}</span>
                 </div>
-                {showDetailButton && (
+                <div className="mao-stat-head-actions">
+                  <button
+                    type="button"
+                    className="mao-stat-expand is-button"
+                    onClick={() => setDetailMetric("asset")}
+                    aria-label={t("放大查看资产总值详情")}
+                    title={t("放大查看")}
+                  >
+                    <Maximize2 size={12} aria-hidden="true" />
+                  </button>
+                  {showDetailButton && (
                   <RenewalReminder
                     nodes={renewalNodes}
                     warningDays={renewalReminderDays}
@@ -534,7 +657,8 @@ function HomeClusterOverview({
                       <CircleDollarSign size={14} className={renewalCount > 0 ? "text-(--status-warning)" : ""} />
                     </Link>
                   </RenewalReminder>
-                )}
+                  )}
+                </div>
               </div>
               <div className="mao-stat-value">
                 {renderAssetValue()}
@@ -655,6 +779,23 @@ function HomeClusterOverview({
           </div>
         </div>
       </div>
+      )}
+
+      {/* 指标放大视图：点左栏任一指标卡弹出（portal 到 body，避开卡片的层叠上下文） */}
+      {detailMetric && detailView && (
+        <MetricDetailDialog
+          metric={detailMetric}
+          value={detailView.value}
+          unit={detailView.unit}
+          caption={detailView.caption}
+          stats={detailView.stats}
+          rows={detailView.rows}
+          rowsCaption={detailView.rowsCaption}
+          emptyRowsText={detailView.emptyRowsText}
+          priceHidden={detailView.priceHidden}
+          samples={trendSamples}
+          onClose={closeDetail}
+        />
       )}
     </>
   );
