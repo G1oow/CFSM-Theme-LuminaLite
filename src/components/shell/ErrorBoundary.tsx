@@ -2,6 +2,7 @@ import { Component, useEffect, type CSSProperties, type ErrorInfo, type ReactNod
 import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 import { readViewModeHint, useViewMode } from "@/hooks/useViewMode";
 import { isChunkLoadError } from "@/utils/safeLazy";
+import { hardReload } from "@/utils/hardReload";
 import { t } from "@/i18n";
 
 interface ErrorBoundaryProps {
@@ -47,7 +48,7 @@ async function copyDiagnostics(text: string) {
 }
 
 function reloadPage() {
-  window.location.reload();
+  hardReload();
 }
 
 const preStyle: CSSProperties = {
@@ -89,7 +90,7 @@ function ErrorFallback({
       const last = Number(sessionStorage.getItem(reloadKey) || "0");
       if (now - last > 10_000) {
         sessionStorage.setItem(reloadKey, String(now));
-        window.location.reload();
+        hardReload();
       }
     }
   }, [isChunkError]);
