@@ -43,6 +43,11 @@ export function MetricTrendChart({ metric, points }: MetricTrendChartProps) {
   const [width, setWidth] = useState(0);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
+  // 曲线要两个点才画，在那之前包装层根本不渲染，挂载时 ref 还是空的、量不到宽度。
+  // 所以测量跟着「有没有画布」重跑：采样攒到第二个点时再量一次，否则宽度会一直是 0，
+  // 弹窗里只剩一个空框，要关掉重开（此时已有两个点）才画得出来。
+  const hasCanvas = points.length > 1;
+
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -55,7 +60,7 @@ export function MetricTrendChart({ metric, points }: MetricTrendChartProps) {
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [hasCanvas]);
 
   const yMax = useMemo(() => {
     let max = 0;
@@ -84,7 +89,7 @@ export function MetricTrendChart({ metric, points }: MetricTrendChartProps) {
     setHoverIndex(index >= 0 ? index : null);
   };
 
-  if (points.length < 2) {
+  if (!hasCanvas) {
     return (
       <div className="mao-detail-chart is-empty">
         <span>{t("趋势正在采集，页面打开后每 5 秒记一个点")}</span>
@@ -98,7 +103,7 @@ export function MetricTrendChart({ metric, points }: MetricTrendChartProps) {
 
   // 刚打开页面时缓冲里只有几十秒，刻度要精确到秒才看得出三个刻度的差别。
   const withSeconds =
-    points.length > 1 && points[points.length - 1]!.t - points[0]!.t < 5 * 60_000;
+    hasCanvas && points[points.length - 1]!.t - points[0]!.t < 5 * 60_000;
 
   return (
     <div
