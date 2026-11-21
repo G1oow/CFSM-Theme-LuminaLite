@@ -143,7 +143,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, info: ErrorInfo) {
     // 类组件里用不了 hook,所以用 readViewModeHint。它给的是 device + override 而非最终解析的 mode,但区分 compact/large 排查问题足够了
     console.error(
-      "[CFSM-Theme-SAO] render error\n" + buildDiagnostics(error, readViewModeHint()),
+      "[LuminaLite] render error\n" + buildDiagnostics(error, readViewModeHint()),
       info,
     );
   }
@@ -169,7 +169,7 @@ export function RouteErrorFallback() {
   const diagnostics = buildDiagnostics(error, `${device}/${mode}`);
 
   useEffect(() => {
-    console.error("[CFSM-Theme-SAO] route error\n" + diagnostics);
+    console.error("[LuminaLite] route error\n" + diagnostics);
   }, [diagnostics]);
 
   if (isRouteErrorResponse(error)) {
