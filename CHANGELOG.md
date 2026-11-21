@@ -3,6 +3,14 @@
 每个版本的第一行会被 CI 取出来，作为产物提交的说明 —— 也就是主题商店里显示的更新日志。
 发新版时先改 `package.json` 的 `version`，再在这里加一段。
 
+## v2.1.6
+
+页面标题与 meta 里遗留的旧主题名 CFSM-Theme-SAO 换成 LuminaLite
+
+- 兜底标题 `FALLBACK_TITLE`（后台没设站点标题、访客本机也没有缓存时才会用到）由 `CFSM-Theme-SAO` 改为 `LuminaLite`，新访客的标签页和分享卡片不再显示上游主题名。
+- `keywords`、`og:title`、`twitter:title`、`apple-mobile-web-app-title` 的初始值一并改掉；页面挂载后仍由后台的站点标题改写。
+- 崩溃日志前缀由 `[CFSM-Theme-SAO]` 改为 `[LuminaLite]`。
+
 ## v2.1.5
 
 指标放大视图的趋势曲线会自己画出来，不必关掉再点开
